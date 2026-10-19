@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/security/roles_and_permissions.dart';
@@ -37,15 +38,21 @@ class FirebaseAuthRepository implements BaseAuthRepository {
   }
 
   void _init() {
-    _authSubscription = _auth.authStateChanges().listen((firebaseUser) {
-      if (firebaseUser == null) {
-        _userDocSubscription?.cancel();
-        _currentUser = null;
+    try {
+      _authSubscription = _auth.authStateChanges().listen((firebaseUser) {
+        if (firebaseUser == null) {
+          _userDocSubscription?.cancel();
+          _currentUser = null;
+          _userController.add(null);
+        } else {
+          _listenToUserDoc(firebaseUser.uid, firebaseUser);
+        }
+      }, onError: (e) {
         _userController.add(null);
-      } else {
-        _listenToUserDoc(firebaseUser.uid, firebaseUser);
-      }
-    });
+      });
+    } catch (e) {
+      // Tolérance en cas de projet non connecté / hors-ligne
+    }
   }
 
   void _listenToUserDoc(String uid, User firebaseUser) {
@@ -96,18 +103,26 @@ class FirebaseAuthRepository implements BaseAuthRepository {
   @override
   Future<AppUser?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null; // Utilisateur a annulé la sélection
+      UserCredential userCredential;
+      if (kIsWeb) {
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        userCredential = await _auth.signInWithPopup(googleProvider);
+      } else {
+        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) return null; // Utilisateur a annulé la sélection
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final OAuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
 
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+        userCredential = await _auth.signInWithCredential(credential);
+      }
+
       final User? firebaseUser = userCredential.user;
-
       if (firebaseUser == null) return null;
 
       final docRef = _firestore.collection(AppConstants.colUsers).doc(firebaseUser.uid);
