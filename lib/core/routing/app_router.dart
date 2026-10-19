@@ -1,0 +1,122 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../features/admin/screens/admin_roles_screen.dart';
+import '../../features/audit/screens/audit_log_screen.dart';
+import '../../features/auth/providers/auth_provider.dart';
+import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/screens/splash_screen.dart';
+import '../../features/dashboard/screens/dashboard_screen.dart';
+import '../../features/dues/screens/dues_list_screen.dart';
+import '../../features/events/screens/events_list_screen.dart';
+import '../../features/membership/screens/members_list_screen.dart';
+import '../../features/membership/screens/membership_apply_screen.dart';
+import '../../features/membership/screens/membership_status_screen.dart';
+import '../../features/membership_fees/screens/membership_fee_screen.dart';
+import '../../features/messaging/screens/conversations_screen.dart';
+import '../../features/notifications/screens/notifications_screen.dart';
+import '../../features/posts/screens/posts_screen.dart';
+import '../../features/reports/screens/reports_screen.dart';
+import '../../features/treasury/screens/treasury_dashboard_screen.dart';
+import '../../features/user_profile/screens/profile_screen.dart';
+
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authStateProvider);
+
+  return GoRouter(
+    initialLocation: '/splash',
+    routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/dashboard',
+        builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/members',
+        builder: (context, state) => const MembersListScreen(),
+      ),
+      GoRoute(
+        path: '/membership-apply',
+        builder: (context, state) => const MembershipApplyScreen(),
+      ),
+      GoRoute(
+        path: '/membership-status',
+        builder: (context, state) => const MembershipStatusScreen(),
+      ),
+      GoRoute(
+        path: '/membership-fee',
+        builder: (context, state) => const MembershipFeeScreen(),
+      ),
+      GoRoute(
+        path: '/dues',
+        builder: (context, state) => const DuesListScreen(),
+      ),
+      GoRoute(
+        path: '/treasury',
+        builder: (context, state) => const TreasuryDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/events',
+        builder: (context, state) => const EventsListScreen(),
+      ),
+      GoRoute(
+        path: '/posts',
+        builder: (context, state) => const PostsScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/conversations',
+        builder: (context, state) => const ConversationsScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/admin/roles',
+        builder: (context, state) => const AdminRolesScreen(),
+      ),
+      GoRoute(
+        path: '/reports',
+        builder: (context, state) => const ReportsScreen(),
+      ),
+      GoRoute(
+        path: '/audit',
+        builder: (context, state) => const AuditLogScreen(),
+      ),
+    ],
+    redirect: (context, state) {
+      final user = ref.read(currentUserProvider);
+      final isLoggedIn = user != null;
+      final isLoggingIn = state.matchedLocation == '/login';
+      final isSplash = state.matchedLocation == '/splash';
+
+      if (isSplash) return null;
+
+      if (!isLoggedIn && !isLoggingIn) {
+        return '/login';
+      }
+
+      if (isLoggedIn && isLoggingIn) {
+        return '/dashboard';
+      }
+
+      // Protection des routes admin
+      if (state.matchedLocation.startsWith('/admin') && user != null && !user.isAdmin) {
+        return '/dashboard';
+      }
+
+      return null;
+    },
+  );
+});

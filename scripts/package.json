@@ -1,0 +1,12 @@
+{
+  "name": "ajra-admin-scripts",
+  "version": "1.0.0",
+  "description": "Scripts d'administration et d'initialisation sécurisée du premier administrateur AJRA",
+  "main": "bootstrap_admin.js",
+  "scripts": {
+    "bootstrap-admin": "node bootstrap_admin.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.1.0"
+  }
+}

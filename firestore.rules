@@ -1,0 +1,206 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Fonctions d'aide pour la sécurité
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.role == 'ADMIN') ||
+        (getUserData().role == 'ADMIN')
+      );
+    }
+
+    function hasPermission(permission) {
+      return isSignedIn() && (
+        isAdmin() ||
+        (getUserData().role == 'MEMBRE_BUREAU' && getUserData().permissions.hasAny([permission]))
+      );
+    }
+
+    function isNotSuspended() {
+      return isSignedIn() && (
+        !getUserData().keys().hasAny(['isSuspended']) ||
+        getUserData().isSuspended == false
+      );
+    }
+
+    // 1. Utilisateurs (users)
+    match /users/{userId} {
+      // Lecture: soi-même ou membres du bureau / admin
+      allow read: if isSignedIn() && isNotSuspended() && (isOwner(userId) || hasPermission('users.manage') || isAdmin());
+      
+      // Création initiale: lors du premier sign-in Google
+      // Interdiction formelle de s'auto-attribuer le rôle ADMIN ou MEMBRE_BUREAU
+      allow create: if isOwner(userId) &&
+        request.resource.data.role == 'MEMBRE' &&
+        (!request.resource.data.keys().hasAny(['permissions']) || request.resource.data.permissions.size() == 0);
+
+      // Mise à jour: seul l'admin peut modifier le rôle et les permissions
+      // L'utilisateur ne peut modifier que son displayName, photoUrl ou lastLoginAt
+      allow update: if isNotSuspended() && (
+        isAdmin() ||
+        (isOwner(userId) && 
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'isSuspended']))
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // 2. Membres & Dossiers administratifs (members)
+    match /members/{userId} {
+      // Lecture: le membre lui-même ou les membres habilités du bureau/admin
+      allow read: if isSignedIn() && isNotSuspended() && (isOwner(userId) || hasPermission('membership.review') || isAdmin());
+
+      // Création de la demande: le membre lui-même avec statut "pending"
+      allow create: if isOwner(userId) && isNotSuspended() &&
+        request.resource.data.status == 'pending';
+
+      // Modification du dossier:
+      // - Le membre peut modifier son adresse/téléphone tant que non verrouillé
+      // - Le bureau habilité peut modifier le statut (approuver/rejeter), SAUF pour son propre dossier
+      allow update: if isSignedIn() && isNotSuspended() && (
+        (hasPermission('membership.review') && request.auth.uid != userId) ||
+        (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'reviewedByUserId', 'approvedAt', 'rejectedAt'])) ||
+        isAdmin()
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // 3. Paiements du droit d'adhésion (membershipPayments)
+    match /membershipPayments/{paymentId} {
+      allow read: if isSignedIn() && isNotSuspended() && (isOwner(paymentId) || hasPermission('payment.verify') || isAdmin());
+      // Déclaration par le membre:
+      allow create, update: if isSignedIn() && isNotSuspended() && (
+        (isOwner(paymentId) && request.resource.data.isVerified == false) ||
+        (hasPermission('payment.verify') && request.auth.uid != resource.data.userId) ||
+        isAdmin()
+      );
+    }
+
+    // 4. Configuration des droits d'adhésion (membershipFeeConfigs)
+    match /membershipFeeConfigs/{configId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 5. Cotisations mensuelles (dues)
+    match /dues/{dueId} {
+      allow read: if isSignedIn() && isNotSuspended() && (
+        resource.data.userId == request.auth.uid || hasPermission('dues.manage') || hasPermission('payment.verify') || isAdmin()
+      );
+      // Génération par le bureau
+      allow create: if hasPermission('dues.manage') || isAdmin();
+      // Déclaration par le membre ou validation par le bureau
+      allow update: if isSignedIn() && isNotSuspended() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.status in ['declared', 'pending']) ||
+        (hasPermission('payment.verify') && request.auth.uid != resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 6. Comptes financiers (financialAccounts)
+    match /financialAccounts/{accountId} {
+      allow read: if isSignedIn() && isNotSuspended() && (hasPermission('finance.report.view') || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 7. Écritures comptables (financialTransactions)
+    match /financialTransactions/{txId} {
+      allow read: if isSignedIn() && isNotSuspended() && (hasPermission('finance.report.view') || isAdmin());
+      // Création: nécessite permission de création financière
+      allow create: if hasPermission('finance.transaction.create') || isAdmin();
+      // Validation ou annulation: nécessite permission d'approbation financière
+      // Interdiction de suppression physique silencieuse (doit être annulée par statut)
+      allow update: if hasPermission('finance.transaction.approve') || isAdmin();
+      allow delete: if false; // Strictement interdit de supprimer une transaction!
+    }
+
+    // 8. Événements (events)
+    match /events/{eventId} {
+      allow read: if isSignedIn() && isNotSuspended();
+      allow create, update: if hasPermission('event.manage') || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Inscriptions aux événements
+    match /eventParticipants/{participantId} {
+      allow read: if isSignedIn() && isNotSuspended();
+      allow create: if isSignedIn() && isNotSuspended() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && isNotSuspended() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // 9. Collectes de fonds (fundraisingCampaigns & fundraisingContributions)
+    match /fundraisingCampaigns/{campaignId} {
+      allow read: if isSignedIn() && isNotSuspended();
+      allow create, update: if hasPermission('fundraising.manage') || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /fundraisingContributions/{contribId} {
+      allow read: if isSignedIn() && isNotSuspended() && (
+        resource.data.userId == request.auth.uid || hasPermission('fundraising.manage') || hasPermission('payment.verify') || isAdmin()
+      );
+      allow create: if isSignedIn() && isNotSuspended() && request.resource.data.userId == request.auth.uid;
+      allow update: if (hasPermission('payment.verify') && request.auth.uid != resource.data.userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 10. Publications officielles (posts)
+    match /posts/{postId} {
+      allow read: if isSignedIn() && isNotSuspended();
+      allow create, update: if hasPermission('post.publish') || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 11. Notifications (notifications)
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() && isNotSuspended() && resource.data.recipientUserId == request.auth.uid;
+      allow update: if isSignedIn() && isNotSuspended() && resource.data.recipientUserId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow create: if isAdmin() || hasPermission('post.publish') || hasPermission('membership.review');
+      allow delete: if isOwner(resource.data.recipientUserId) || isAdmin();
+    }
+
+    // 12. Messagerie privée (conversations & messages)
+    match /conversations/{convId} {
+      allow read: if isSignedIn() && isNotSuspended() && resource.data.participantIds.hasAny([request.auth.uid]);
+      allow create: if isSignedIn() && isNotSuspended() && request.resource.data.participantIds.hasAny([request.auth.uid]);
+      allow update: if isSignedIn() && isNotSuspended() && resource.data.participantIds.hasAny([request.auth.uid]);
+      allow delete: if false;
+    }
+
+    match /messages/{messageId} {
+      allow read: if isSignedIn() && isNotSuspended(); // Filtré par l'index conversationId et conversation.participantIds
+      allow create: if isSignedIn() && isNotSuspended() && request.resource.data.senderId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // 13. Journal d'Audit (auditLogs) - Immuable!
+    match /auditLogs/{logId} {
+      allow read: if hasPermission('audit.view') || isAdmin();
+      allow create: if isSignedIn(); // Tout événement système peut créer un log
+      allow update, delete: if false; // Strictement immuable!
+    }
+
+    // 14. Paramètres globaux (appSettings)
+    match /appSettings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
