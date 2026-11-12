@@ -25,31 +25,30 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKeyAjraMauritius2026',
-    appId: '1:100000000000:web:ajra0000000000',
-    messagingSenderId: '100000000000',
-    projectId: 'ajra-app',
-    authDomain: 'ajra-app.firebaseapp.com',
-    storageBucket: 'ajra-app.appspot.com',
+    apiKey: 'AIzaSyDpL4tWPo-VNHgps40HyHuhX1lRHrIpByY',
+    appId: '1:682841193589:web:4e19112847e42844ce8c3c',
+    messagingSenderId: '682841193589',
+    projectId: 'ajra-app-8ae42',
+    authDomain: 'ajra-app-8ae42.firebaseapp.com',
+    storageBucket: 'ajra-app-8ae42.firebasestorage.app',
+    measurementId: 'G-CSVP28B886',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKeyAjraMauritius2026',
-    appId: '1:100000000000:android:ajra0000000000',
-    messagingSenderId: '100000000000',
-    projectId: 'ajra-app',
-    storageBucket: 'ajra-app.appspot.com',
+    apiKey: 'AIzaSyD0WcZ07RA8LVnkapjN70jOEcJS20Xs-1Q',
+    appId: '1:682841193589:android:430950f6072bc9b5ce8c3c',
+    messagingSenderId: '682841193589',
+    projectId: 'ajra-app-8ae42',
+    storageBucket: 'ajra-app-8ae42.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKeyAjraMauritius2026',
-    appId: '1:100000000000:ios:ajra0000000000',
-    messagingSenderId: '100000000000',
-    projectId: 'ajra-app',
-    storageBucket: 'ajra-app.appspot.com',
+    apiKey: 'AIzaSyCbpYDRkv3joHgpxEF4hbpU1C5rTz9dzKw',
+    appId: '1:682841193589:ios:059f93e67a9db3d6ce8c3c',
+    messagingSenderId: '682841193589',
+    projectId: 'ajra-app-8ae42',
+    storageBucket: 'ajra-app-8ae42.firebasestorage.app',
     iosBundleId: 'com.ajra.ajra',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDemoKeyAjraMauritius2026',
     appId: '1:100000000000:ios:ajra0000000000',
@@ -60,11 +59,12 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKeyAjraMauritius2026',
-    appId: '1:100000000000:web:ajra0000000000',
-    messagingSenderId: '100000000000',
-    projectId: 'ajra-app',
-    authDomain: 'ajra-app.firebaseapp.com',
-    storageBucket: 'ajra-app.appspot.com',
+    apiKey: 'AIzaSyDpL4tWPo-VNHgps40HyHuhX1lRHrIpByY',
+    appId: '1:682841193589:web:845470d6dea3aa9ece8c3c',
+    messagingSenderId: '682841193589',
+    projectId: 'ajra-app-8ae42',
+    authDomain: 'ajra-app-8ae42.firebaseapp.com',
+    storageBucket: 'ajra-app-8ae42.firebasestorage.app',
+    measurementId: 'G-0NC2ZHXM9X',
   );
 }

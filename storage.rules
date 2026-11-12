@@ -11,32 +11,61 @@ service firebase.storage {
     }
 
     function isAdmin() {
-      return isSignedIn() && request.auth.token.role == 'ADMIN';
+      return isSignedIn() && (
+        (request.auth.token.keys().hasAny(['email']) && request.auth.token.email.lower() == 'heriniaina.luk@gmail.com') ||
+        (request.auth.token.keys().hasAny(['role']) && request.auth.token.role == 'ADMIN')
+      );
+    }
+
+    function isBureau() {
+      return isSignedIn() && (
+        (request.auth.token.keys().hasAny(['role']) && (
+          request.auth.token.role == 'MEMBRE_BUREAU' ||
+          request.auth.token.role == 'PRESIDENT' ||
+          request.auth.token.role == 'TRESORIER' ||
+          request.auth.token.role == 'SECRETAIRE'
+        ))
+      );
     }
 
     // Photos de profil
     match /avatars/{userId}/{fileName} {
       allow read: if isSignedIn();
-      allow write: if isOwner(userId) && request.resource.size < 5 * 1024 * 1024
+      allow write: if (isOwner(userId) || isBureau() || isAdmin()) && request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     // Justificatifs de paiement
     match /proofs/{userId}/{fileName} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow write: if isOwner(userId) && request.resource.size < 10 * 1024 * 1024;
+      allow read: if isOwner(userId) || isBureau() || isAdmin();
+      allow write: if (isOwner(userId) || isBureau() || isAdmin()) && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     // Documents d'identité et passeports (très confidentiels)
     match /passports/{userId}/{fileName} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow write: if isOwner(userId) && request.resource.size < 10 * 1024 * 1024;
+      allow read: if isOwner(userId) || isBureau() || isAdmin();
+      allow write: if (isOwner(userId) || isBureau() || isAdmin()) && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     // Médias officiels des actualités et événements
     match /media/{fileName} {
       allow read: if isSignedIn();
       allow write: if isAdmin() && request.resource.size < 15 * 1024 * 1024;
+    }
+
+    // Reçus, factures et tickets de caisse des événements et dépenses
+    match /receipts/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Téléchargement public des versions APK de l'application
+    match /releases/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

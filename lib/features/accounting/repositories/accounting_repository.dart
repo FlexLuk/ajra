@@ -50,24 +50,51 @@ class FirestoreAccountingRepository implements BaseAccountingRepository {
   @override
   Stream<List<FinancialAccount>> watchAccounts() {
     return _accountsCol.snapshots().map((snapshot) {
+      final defaultList = [
+        FinancialAccount.cashDefault(),
+        FinancialAccount.bankDefault(),
+        FinancialAccount.juiceDefault(),
+      ];
       if (snapshot.docs.isEmpty) {
-        return [FinancialAccount.cashDefault(), FinancialAccount.bankDefault()];
+        return defaultList;
       }
-      return snapshot.docs
+      final existingAccounts = snapshot.docs
           .map((doc) => FinancialAccount.fromJson(doc.data(), doc.id))
           .toList();
+
+      // Ensure all 3 accounts exist in the list
+      final accountsById = {for (final a in existingAccounts) a.id: a};
+      for (final defAcc in defaultList) {
+        if (!accountsById.containsKey(defAcc.id)) {
+          existingAccounts.add(defAcc);
+        }
+      }
+      return existingAccounts;
     });
   }
 
   @override
   Future<List<FinancialAccount>> getAccounts() async {
     final snapshot = await _accountsCol.get();
+    final defaultList = [
+      FinancialAccount.cashDefault(),
+      FinancialAccount.bankDefault(),
+      FinancialAccount.juiceDefault(),
+    ];
     if (snapshot.docs.isEmpty) {
-      return [FinancialAccount.cashDefault(), FinancialAccount.bankDefault()];
+      return defaultList;
     }
-    return snapshot.docs
+    final existingAccounts = snapshot.docs
         .map((doc) => FinancialAccount.fromJson(doc.data(), doc.id))
         .toList();
+
+    final accountsById = {for (final a in existingAccounts) a.id: a};
+    for (final defAcc in defaultList) {
+      if (!accountsById.containsKey(defAcc.id)) {
+        existingAccounts.add(defAcc);
+      }
+    }
+    return existingAccounts;
   }
 
   @override
@@ -78,23 +105,20 @@ class FirestoreAccountingRepository implements BaseAccountingRepository {
     DateTime? startDate,
     DateTime? endDate,
   }) {
-    Query<Map<String, dynamic>> query = _transactionsCol.orderBy('date', descending: true);
-
-    if (typeFilter != null) {
-      query = query.where('type', isEqualTo: typeFilter.name);
-    }
-    if (statusFilter != null) {
-      query = query.where('status', isEqualTo: statusFilter.name);
-    }
-    if (categoryFilter != null) {
-      query = query.where('category', isEqualTo: categoryFilter);
-    }
-
-    return query.snapshots().map((snapshot) {
+    return _transactionsCol.snapshots().map((snapshot) {
       var list = snapshot.docs
           .map((doc) => FinancialTransaction.fromJson(doc.data(), doc.id))
           .toList();
 
+      if (typeFilter != null) {
+        list = list.where((tx) => tx.type == typeFilter).toList();
+      }
+      if (statusFilter != null) {
+        list = list.where((tx) => tx.status == statusFilter).toList();
+      }
+      if (categoryFilter != null) {
+        list = list.where((tx) => tx.category == categoryFilter).toList();
+      }
       if (startDate != null) {
         list = list.where((tx) => tx.date.isAfter(startDate)).toList();
       }
@@ -102,6 +126,7 @@ class FirestoreAccountingRepository implements BaseAccountingRepository {
         list = list.where((tx) => tx.date.isBefore(endDate)).toList();
       }
 
+      list.sort((a, b) => b.date.compareTo(a.date));
       return list;
     });
   }

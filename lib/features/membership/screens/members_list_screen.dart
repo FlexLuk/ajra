@@ -33,8 +33,25 @@ class MembersListScreen extends ConsumerWidget {
       selectedIndex: 1,
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Retour',
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                context.go('/dashboard');
+              }
+            },
+          ),
           title: const Text('Membres de l\'association'),
           actions: [
+            if (currentUser != null && currentUser.isAdmin)
+              IconButton(
+                icon: const Icon(Icons.admin_panel_settings_outlined),
+                tooltip: 'Gestion des rôles & utilisateurs',
+                onPressed: () => context.go('/admin/roles'),
+              ),
             if (canManage)
               IconButton(
                 icon: const Icon(Icons.picture_as_pdf_outlined),
@@ -175,8 +192,12 @@ class MembersListScreen extends ConsumerWidget {
                       icon: Icons.people_outline,
                       title: 'Aucun membre trouvé',
                       message: 'Aucun dossier ne correspond aux critères de recherche.',
-                      actionLabel: currentMember == null ? 'Faire une demande d\'adhésion' : null,
-                      onAction: () => context.go('/membership-apply'),
+                      actionLabel: currentUser?.isAdmin == true
+                          ? 'Gérer les utilisateurs & Rôles'
+                          : (currentMember == null ? 'Faire une demande d\'adhésion' : null),
+                      onAction: () => currentUser?.isAdmin == true
+                          ? context.go('/admin/roles')
+                          : context.go('/membership-apply'),
                     );
                   }
 
@@ -263,8 +284,20 @@ class MembersListScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          trailing: const Icon(Icons.chevron_right, color: AppColors.textMutedLight),
+                          trailing: (canManage || isCurrentUser)
+                              ? const Icon(Icons.chevron_right, color: AppColors.textMutedLight)
+                              : const Icon(Icons.lock_outline, size: 16, color: AppColors.textMutedLight),
                           onTap: () {
+                            if (!canManage && !isCurrentUser) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Accès restreint : Seuls les membres du bureau et l\'administrateur peuvent consulter les informations détaillées des membres.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -290,10 +323,17 @@ class MembersListScreen extends ConsumerWidget {
             ? FloatingActionButton.extended(
                 onPressed: () => context.go('/membership-apply'),
                 icon: const Icon(Icons.person_add_alt_1),
-                label: const Text('Adhérer'),
+                label: const Text('Faire une adhésion'),
                 backgroundColor: AppColors.primary,
               )
-            : null,
+            : (currentUser != null && currentUser.isAdmin
+                ? FloatingActionButton.extended(
+                    onPressed: () => context.go('/admin/roles'),
+                    icon: const Icon(Icons.manage_accounts_outlined),
+                    label: const Text('Gérer les rôles'),
+                    backgroundColor: AppColors.primary,
+                  )
+                : null),
       ),
     );
   }

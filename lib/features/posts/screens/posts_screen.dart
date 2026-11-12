@@ -1,25 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../shared/widgets/buttons/ajra_button.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/forms/ajra_text_field.dart';
 import '../../../shared/widgets/states/empty_state_view.dart';
+import '../../../shared/widgets/states/error_state_view.dart';
 import '../../../shared/widgets/states/loading_state_view.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../notifications/services/notification_service.dart';
 import '../models/post_item.dart';
 
 final postsStreamProvider = StreamProvider<List<PostItem>>((ref) {
   return FirebaseFirestore.instance
       .collection(AppConstants.colPosts)
-      .orderBy('publishedAt', descending: true)
       .snapshots()
       .map((snapshot) {
-    return snapshot.docs.map((doc) => PostItem.fromJson(doc.data(), doc.id)).toList();
+    final list = snapshot.docs.map((doc) => PostItem.fromJson(doc.data(), doc.id)).toList();
+    list.sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+    return list;
   });
 });
 
@@ -86,6 +89,18 @@ class _PostsScreenState extends ConsumerState<PostsScreen> {
           .doc(post.id)
           .set(post.toJson());
 
+      // Notifier tous les membres de la nouvelle publication
+      await NotificationService.createBroadcastNotification(
+        title: 'Nouvelle publication : ${post.title}',
+        body: post.content.length > 100 ? '${post.content.substring(0, 100)}...' : post.content,
+        type: 'post',
+        targetRoute: '/posts',
+        entityType: 'post',
+        entityId: post.id,
+        senderUserId: user.uid,
+        senderName: user.displayName,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -103,18 +118,31 @@ class _PostsScreenState extends ConsumerState<PostsScreen> {
     final canPublish = user != null && (user.isAdmin || user.canPublishPosts);
     final postsAsync = ref.watch(postsStreamProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Actualités AJRA'),
-        actions: [
-          if (canPublish)
-            IconButton(
-              icon: const Icon(Icons.post_add_rounded),
-              tooltip: 'Créer une actualité',
-              onPressed: _openCreatePostDialog,
-            ),
-        ],
-      ),
+    return AppScaffold(
+      selectedIndex: 0,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Retour',
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                context.go('/dashboard');
+              }
+            },
+          ),
+          title: const Text('Actualités & Publications'),
+          actions: [
+            if (canPublish)
+              IconButton(
+                icon: const Icon(Icons.post_add_rounded),
+                tooltip: 'Créer une actualité',
+                onPressed: _openCreatePostDialog,
+              ),
+          ],
+        ),
       body: postsAsync.when(
         data: (posts) {
           if (posts.isEmpty) {
@@ -188,8 +216,12 @@ class _PostsScreenState extends ConsumerState<PostsScreen> {
           );
         },
         loading: () => const LoadingStateView(message: 'Chargement des actualités...'),
-        error: (e, _) => Center(child: Text('Erreur : ${e.toString()}')),
+        error: (e, _) => ErrorStateView(
+          message: e.toString(),
+          onRetry: () => ref.refresh(postsStreamProvider),
+        ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

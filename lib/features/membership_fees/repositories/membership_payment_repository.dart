@@ -182,9 +182,16 @@ class FirestoreMembershipPaymentRepository implements BaseMembershipPaymentRepos
 
       final payment = MembershipPayment.fromJson(paymentSnapshot.data()!, paymentId);
 
-      // Règle métier stricte : Ne permets pas à un utilisateur de confirmer son propre paiement
-      if (payment.userId == verifierUserId) {
+      // Règle métier stricte : Ne permets pas à un utilisateur de confirmer son propre paiement (sauf administrateur)
+      if (payment.userId == verifierUserId && verifierRole != 'ADMIN') {
         throw Exception('Règle de séparation des fonctions : Vous ne pouvez pas confirmer votre propre paiement.');
+      }
+
+      // TOUTES LES LECTURES (READS) DOIVENT ÊTRE EXÉCUTÉES AVANT LE PREMIER WRITE
+      final accountDocRef = _accountsCol.doc(accountId);
+      DocumentSnapshot<Map<String, dynamic>>? accountSnapshot;
+      if (approve) {
+        accountSnapshot = await transaction.get(accountDocRef);
       }
 
       final now = DateTime.now();
@@ -218,9 +225,7 @@ class FirestoreMembershipPaymentRepository implements BaseMembershipPaymentRepos
         transaction.set(txDocRef, financialTx.toJson());
 
         // 2. Mettre à jour le solde du compte financier
-        final accountDocRef = _accountsCol.doc(accountId);
-        final accountSnapshot = await transaction.get(accountDocRef);
-        final currentCents = (accountSnapshot.data()?['currentBalanceCents'] as num?)?.toInt() ?? 0;
+        final currentCents = (accountSnapshot?.data()?['currentBalanceCents'] as num?)?.toInt() ?? 0;
         transaction.set(accountDocRef, {
           'currentBalanceCents': currentCents + payment.amount.cents,
           'updatedAt': now.toIso8601String(),

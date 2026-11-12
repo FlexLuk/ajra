@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
@@ -15,6 +16,7 @@ import '../../dues/screens/dues_list_screen.dart';
 import '../../events/screens/events_list_screen.dart';
 import '../../membership/models/member_profile.dart';
 import '../../membership/providers/membership_provider.dart';
+import '../../posts/screens/posts_screen.dart';
 import '../../treasury/screens/treasury_dashboard_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -47,6 +49,9 @@ class DashboardScreen extends ConsumerWidget {
                 ] else ...[
                   _buildMemberDashboard(context, ref, memberProfile),
                 ],
+
+                const SizedBox(height: 24),
+                _buildRecentPostsSection(context, ref),
               ],
             ),
           ),
@@ -59,38 +64,41 @@ class DashboardScreen extends ConsumerWidget {
     final displayName = user?.displayName ?? 'Membre';
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primaryDark, AppColors.primary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        gradient: AppColors.heroGradient,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: AppColors.primary.withValues(alpha: 0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.white24,
-            backgroundImage: user?.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
-            child: user?.photoUrl == null
-                ? Text(
-                    displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  )
-                : null,
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white38, width: 2),
+            ),
+            child: CircleAvatar(
+              radius: 28,
+              backgroundColor: Colors.white24,
+              backgroundImage: user?.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
+              child: user?.photoUrl == null
+                  ? Text(
+                      displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    )
+                  : null,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -101,18 +109,62 @@ class DashboardScreen extends ConsumerWidget {
                   'Bonjour, $displayName',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  member != null
-                      ? 'Matricule : ${member.memberNumber} • Statut : ${member.status.label}'
-                      : 'Espace Membre AJRA',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    member != null
+                        ? 'Matricule : ${member.memberNumber} • ${member.status.label}'
+                        : 'Espace Membre Officiel AJRA',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(color: Colors.white, width: 2.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                AppConstants.logoAsset,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.groups,
+                  color: AppColors.primary,
+                  size: 28,
+                ),
+              ),
             ),
           ),
         ],
@@ -249,6 +301,12 @@ class DashboardScreen extends ConsumerWidget {
               icon: Icons.newspaper_outlined,
               route: '/posts',
             ),
+            _buildActionChip(
+              context,
+              label: 'Emprunts des Membres',
+              icon: Icons.handshake_outlined,
+              route: '/loans',
+            ),
           ],
         ),
       ],
@@ -268,6 +326,13 @@ class DashboardScreen extends ConsumerWidget {
           spacing: 12,
           runSpacing: 12,
           children: [
+            if (user.isAdmin)
+              _buildActionChip(
+                context,
+                label: 'Rôles & Utilisateurs',
+                icon: Icons.admin_panel_settings_outlined,
+                route: '/admin/roles',
+              ),
             if (user.canReviewMembership)
               _buildActionChip(
                 context,
@@ -301,6 +366,18 @@ class DashboardScreen extends ConsumerWidget {
               label: 'Messagerie',
               icon: Icons.chat_outlined,
               route: '/conversations',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Publier actualité',
+              icon: Icons.post_add_outlined,
+              route: '/posts',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Emprunts des Membres',
+              icon: Icons.handshake_outlined,
+              route: '/loans',
             ),
           ],
         ),
@@ -487,6 +564,12 @@ class DashboardScreen extends ConsumerWidget {
               icon: Icons.payments_outlined,
               route: '/membership-fee',
             ),
+            _buildActionChip(
+              context,
+              label: 'Emprunts des Membres',
+              icon: Icons.handshake_outlined,
+              route: '/loans',
+            ),
           ],
         ),
       ],
@@ -501,19 +584,33 @@ class DashboardScreen extends ConsumerWidget {
   }) {
     return InkWell(
       onTap: () => context.go(route),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.borderLight),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x060F172A),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: AppColors.primary),
-            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 16, color: AppColors.primary),
+            ),
+            const SizedBox(width: 10),
             Text(
               label,
               style: const TextStyle(
@@ -525,6 +622,94 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRecentPostsSection(BuildContext context, WidgetRef ref) {
+    final postsAsync = ref.watch(postsStreamProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.campaign_outlined, color: AppColors.primary, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Publications & Actualités',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            TextButton(
+              onPressed: () => context.go('/posts'),
+              child: const Text('Tout voir'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        postsAsync.when(
+          data: (posts) {
+            if (posts.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 18, color: AppColors.textSecondaryLight),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Aucune publication pour le moment.',
+                        style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final previewPosts = posts.take(2).toList();
+            return Column(
+              children: previewPosts.map((post) {
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
+                      child: const Icon(Icons.campaign, color: AppColors.primary, size: 18),
+                    ),
+                    title: Text(
+                      post.title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      post.content,
+                      style: const TextStyle(fontSize: 12),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.chevron_right, size: 18, color: AppColors.textMutedLight),
+                    onTap: () => context.go('/posts'),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 }

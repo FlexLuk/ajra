@@ -124,6 +124,9 @@ class Money implements Comparable<Money> {
     return formatter.format(inRupees).trim();
   }
 
+  /// Alias pratique pour obtenir le formatage direct
+  String get formatted => toFormattedString();
+
   /// Format compact pour les graphiques ou badges: ex: "1.2k Rs."
   String toCompactString() {
     if (cents.abs() >= 100000000) {

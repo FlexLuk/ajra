@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
+import '../../../shared/widgets/forms/ajra_payment_method_selector.dart';
 import '../../../shared/widgets/forms/ajra_text_field.dart';
 import '../../../shared/widgets/indicators/status_badge.dart';
+import '../../../shared/widgets/states/error_state_view.dart';
 import '../../../shared/widgets/states/loading_state_view.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../membership/providers/membership_provider.dart';
@@ -104,6 +107,17 @@ class _MembershipFeeScreenState extends ConsumerState<MembershipFeeScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Retour',
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go('/dashboard');
+            }
+          },
+        ),
         title: const Text('Droit d\'adhésion AJRA'),
       ),
       body: SafeArea(
@@ -250,29 +264,9 @@ class _MembershipFeeScreenState extends ConsumerState<MembershipFeeScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 16),
-                                  DropdownButtonFormField<String>(
-                                    value: _paymentMode,
-                                    decoration: const InputDecoration(labelText: 'Mode de règlement'),
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: 'Virement bancaire MCB',
-                                        child: Text('Virement bancaire MCB'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'Virement bancaire SBM',
-                                        child: Text('Virement bancaire SBM'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'Autre banque mauricienne',
-                                        child: Text('Autre banque mauricienne'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'Espèces auprès du trésorier',
-                                        child: Text('Espèces auprès du trésorier'),
-                                      ),
-                                    ],
-                                    onChanged: (v) {
-                                      if (v != null) setState(() => _paymentMode = v);
+                                  AjraPaymentMethodSelector(
+                                    onChanged: (res) {
+                                      setState(() => _paymentMode = res.fullLabel);
                                     },
                                   ),
                                   const SizedBox(height: 14),
@@ -349,11 +343,17 @@ class _MembershipFeeScreenState extends ConsumerState<MembershipFeeScreen> {
                   );
                 },
                 loading: () => const LoadingStateView(message: 'Vérification du dossier...'),
-                error: (e, _) => Center(child: Text('Erreur : ${e.toString()}')),
+                error: (e, _) => ErrorStateView(
+                  message: e.toString(),
+                  onRetry: () => ref.refresh(userMembershipPaymentProvider),
+                ),
               );
             },
             loading: () => const LoadingStateView(message: 'Chargement des paramètres...'),
-            error: (e, _) => Center(child: Text('Erreur : ${e.toString()}')),
+            error: (e, _) => ErrorStateView(
+              message: e.toString(),
+              onRetry: () => ref.refresh(feeConfigProvider),
+            ),
           ),
         ),
       ),

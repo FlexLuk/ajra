@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "682841193589",
+    "project_id": "ajra-app-8ae42",
+    "storage_bucket": "ajra-app-8ae42.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:682841193589:android:430950f6072bc9b5ce8c3c",
+        "android_client_info": {
+          "package_name": "com.ajra.ajra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0WcZ07RA8LVnkapjN70jOEcJS20Xs-1Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

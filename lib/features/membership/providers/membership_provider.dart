@@ -55,3 +55,13 @@ final expiringPassportsProvider = FutureProvider<List<MemberProfile>>((ref) asyn
   final repo = ref.watch(membershipRepositoryProvider);
   return repo.getExpiringPassports();
 });
+
+/// Détermine si l'utilisateur connecté est un membre pleinement validé et actif (ou admin/bureau)
+final isMemberValidatedAndActiveProvider = Provider<bool>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return false;
+  if (user.isAdmin || user.role == UserRole.bureau) return true;
+  final memberAsync = ref.watch(currentMemberProfileProvider);
+  final member = memberAsync.value;
+  return member != null && member.status == MembershipStatus.active;
+});

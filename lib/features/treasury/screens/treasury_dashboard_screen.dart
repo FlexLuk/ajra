@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -14,23 +15,16 @@ import '../../../shared/widgets/forms/ajra_date_field.dart';
 import '../../../shared/widgets/forms/ajra_text_field.dart';
 import '../../../shared/widgets/indicators/status_badge.dart';
 import '../../../shared/widgets/states/empty_state_view.dart';
+import '../../../shared/widgets/states/error_state_view.dart';
 import '../../../shared/widgets/states/loading_state_view.dart';
 import '../../accounting/models/financial_account.dart';
 import '../../accounting/models/financial_transaction.dart';
+import '../../accounting/providers/accounting_provider.dart';
 import '../../accounting/repositories/accounting_repository.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../dues/widgets/dues_summary_share_dialog.dart';
 
-final accountingRepoProvider = Provider<BaseAccountingRepository>((ref) {
-  return FirestoreAccountingRepository();
-});
-
-final accountsStreamProvider = StreamProvider<List<FinancialAccount>>((ref) {
-  return ref.watch(accountingRepoProvider).watchAccounts();
-});
-
-final recentTransactionsProvider = StreamProvider<List<FinancialTransaction>>((ref) {
-  return ref.watch(accountingRepoProvider).watchTransactions();
-});
+export '../../accounting/providers/accounting_provider.dart';
 
 class TreasuryDashboardScreen extends ConsumerStatefulWidget {
   const TreasuryDashboardScreen({super.key});
@@ -40,6 +34,66 @@ class TreasuryDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  TransactionStatus? _filterStatus;
+  TransactionType? _filterType;
+  String? _filterAccountId;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+      _filterStatus = null;
+      _filterType = null;
+      _filterAccountId = null;
+    });
+  }
+
+  List<FinancialTransaction> _getFilteredTransactions(List<FinancialTransaction> transactions) {
+    return transactions.where((tx) {
+      if (_filterStatus != null && tx.status != _filterStatus) {
+        return false;
+      }
+      if (_filterType != null && tx.type != _filterType) {
+        return false;
+      }
+      if (_filterAccountId != null) {
+        final matchesSource = tx.accountId == _filterAccountId;
+        final matchesDest = tx.targetAccountId == _filterAccountId;
+        if (!matchesSource && !matchesDest) return false;
+      }
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase().trim();
+        final matchesDesc = tx.description.toLowerCase().contains(q);
+        final matchesCat = tx.category.toLowerCase().contains(q);
+        final matchesMode = tx.paymentMode.toLowerCase().contains(q);
+        final matchesRef = tx.reference.toLowerCase().contains(q);
+        final matchesCreator = tx.createdByName.toLowerCase().contains(q);
+        final matchesValidator = tx.validatedByName?.toLowerCase().contains(q) ?? false;
+        final matchesAmount = tx.amount.inRupees.toString().contains(q) ||
+            tx.amount.toFormattedString().toLowerCase().contains(q);
+
+        if (!matchesDesc &&
+            !matchesCat &&
+            !matchesMode &&
+            !matchesRef &&
+            !matchesCreator &&
+            !matchesValidator &&
+            !matchesAmount) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+  }
+
   Future<void> _openNewTransactionModal() async {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
@@ -120,6 +174,7 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                   items: const [
                     DropdownMenuItem(value: AppConstants.accountCash, child: Text('Caisse Espèces')),
                     DropdownMenuItem(value: AppConstants.accountBank, child: Text('Compte Bancaire Principal')),
+                    DropdownMenuItem(value: AppConstants.accountJuice, child: Text('Juice (MCB)')),
                   ],
                   onChanged: (v) {
                     if (v != null) setModalState(() => selectedAccount = v);
@@ -176,7 +231,9 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
         amount: amount,
         date: selectedDate,
         description: descController.text.trim().isEmpty ? 'Opération diverse' : descController.text.trim(),
-        paymentMode: selectedAccount == AppConstants.accountCash ? 'Espèces' : 'Virement bancaire',
+        paymentMode: selectedAccount == AppConstants.accountCash
+            ? 'Espèces'
+            : (selectedAccount == AppConstants.accountJuice ? 'Virement Juice' : 'Transfert bancaire'),
         reference: refController.text.trim().isEmpty ? 'REF-$txId' : refController.text.trim(),
         accountId: selectedAccount,
         createdByUserId: user.uid,
@@ -272,8 +329,29 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
       selectedIndex: 3,
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Retour',
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                context.go('/dashboard');
+              }
+            },
+          ),
           title: const Text('Portefeuille & Trésorerie AJRA'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'Partager le bilan des cotisations (PNG / WhatsApp)',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => const DuesSummaryShareDialog(),
+                );
+              },
+            ),
             if (canCreate)
               IconButton(
                 icon: const Icon(Icons.add_card),
@@ -306,6 +384,7 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
               pendingTotalCents += t.amount.cents;
             }
             final pendingTotal = Money.fromCents(pendingTotalCents);
+            final filteredTxs = _getFilteredTransactions(allTxs);
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -467,18 +546,20 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                     data: (accounts) {
                       return Row(
                         children: accounts.map((acc) {
+                          final isCash = acc.id == AppConstants.accountCash;
+                          final isJuice = acc.id == AppConstants.accountJuice;
                           return Expanded(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4.0),
                               child: MetricCard(
                                 title: acc.name,
                                 value: acc.currentBalance.toFormattedString(),
-                                icon: acc.id == AppConstants.accountCash
+                                icon: isCash
                                     ? Icons.payments_outlined
-                                    : Icons.account_balance_outlined,
-                                iconColor: acc.id == AppConstants.accountCash
+                                    : (isJuice ? Icons.phone_android_rounded : Icons.account_balance_outlined),
+                                iconColor: isCash
                                     ? AppColors.secondary
-                                    : AppColors.primary,
+                                    : (isJuice ? const Color(0xFFF97316) : AppColors.primary),
                               ),
                             ),
                           );
@@ -488,38 +569,288 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                     loading: () => const SizedBox.shrink(),
                     error: (_, __) => const SizedBox.shrink(),
                   ),
+                  // Raccourci vers Emprunts des Membres
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.borderLight),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.handshake_outlined, color: AppColors.primary, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Emprunts des Membres',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Registre transparent des aides remboursables',
+                                style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+                              ),
+                            ],
+                          ),
+                        ),
+                        OutlinedButton(
+                          onPressed: () => context.go('/loans'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Consulter', style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
 
                   // Operations List Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Historique des écritures comptables',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          const Text(
+                            'Écritures comptables',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${allTxs.length}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      TextButton(
+                      TextButton.icon(
                         onPressed: canCreate ? _openNewTransactionModal : null,
-                        child: const Text('Nouvelle'),
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Nouvelle'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
+
+                  // Search Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderLight),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher (libellé, réf, membre, montant...)',
+                        hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMutedLight),
+                        prefixIcon: const Icon(Icons.search, color: AppColors.primary, size: 20),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                      onChanged: (val) => setState(() => _searchQuery = val),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Filter Chips Scrollable Row
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        // Status Filters
+                        ChoiceChip(
+                          label: Text('Toutes (${allTxs.length})'),
+                          selected: _filterStatus == null && _filterType == null && _filterAccountId == null,
+                          onSelected: (_) => _resetFilters(),
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          avatar: pendingTxs.isNotEmpty
+                              ? Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.warning,
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                              : null,
+                          label: Text('En attente (${pendingTxs.length})'),
+                          selected: _filterStatus == TransactionStatus.pending,
+                          selectedColor: AppColors.warningLight,
+                          onSelected: (_) => setState(() {
+                            _filterStatus = _filterStatus == TransactionStatus.pending ? null : TransactionStatus.pending;
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          label: Text('Validées (${validatedTxs.length})'),
+                          selected: _filterStatus == TransactionStatus.validated,
+                          selectedColor: AppColors.successLight,
+                          onSelected: (_) => setState(() {
+                            _filterStatus = _filterStatus == TransactionStatus.validated ? null : TransactionStatus.validated;
+                          }),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(width: 1, height: 22, color: AppColors.borderLight),
+                        const SizedBox(width: 12),
+                        // Type Filters
+                        FilterChip(
+                          label: const Text('Recettes'),
+                          selected: _filterType == TransactionType.income,
+                          selectedColor: AppColors.successLight,
+                          onSelected: (_) => setState(() {
+                            _filterType = _filterType == TransactionType.income ? null : TransactionType.income;
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          label: const Text('Dépenses'),
+                          selected: _filterType == TransactionType.expense,
+                          selectedColor: AppColors.dangerLight,
+                          onSelected: (_) => setState(() {
+                            _filterType = _filterType == TransactionType.expense ? null : TransactionType.expense;
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          label: const Text('Virements'),
+                          selected: _filterType == TransactionType.transfer,
+                          onSelected: (_) => setState(() {
+                            _filterType = _filterType == TransactionType.transfer ? null : TransactionType.transfer;
+                          }),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(width: 1, height: 22, color: AppColors.borderLight),
+                        const SizedBox(width: 12),
+                        // Account Filters
+                        FilterChip(
+                          label: const Text('Caisse Espèces'),
+                          selected: _filterAccountId == AppConstants.accountCash,
+                          onSelected: (_) => setState(() {
+                            _filterAccountId = _filterAccountId == AppConstants.accountCash ? null : AppConstants.accountCash;
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          label: const Text('Banque'),
+                          selected: _filterAccountId == AppConstants.accountBank,
+                          onSelected: (_) => setState(() {
+                            _filterAccountId = _filterAccountId == AppConstants.accountBank ? null : AppConstants.accountBank;
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          label: const Text('Juice'),
+                          selected: _filterAccountId == AppConstants.accountJuice,
+                          onSelected: (_) => setState(() {
+                            _filterAccountId = _filterAccountId == AppConstants.accountJuice ? null : AppConstants.accountJuice;
+                          }),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Results Counter and Reset when filtered
+                  if (_searchQuery.isNotEmpty || _filterStatus != null || _filterType != null || _filterAccountId != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.filter_alt_outlined, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${filteredTxs.length} écriture(s) trouvée(s)',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const Spacer(),
+                          InkWell(
+                            onTap: _resetFilters,
+                            child: const Text(
+                              'Réinitialiser',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
 
                   if (allTxs.isEmpty)
                     const EmptyStateView(
                       icon: Icons.receipt_outlined,
                       title: 'Aucune écriture comptable',
-                      message: 'Les opérations financières validées apparaîtront ici.',
+                      message: 'Les opérations financières apparaîtront ici.',
+                    )
+                  else if (filteredTxs.isEmpty)
+                    EmptyStateView(
+                      icon: Icons.search_off_rounded,
+                      title: 'Aucune écriture correspondante',
+                      message: 'Aucune opération ne correspond à vos filtres ou termes de recherche.',
+                      actionLabel: 'Effacer les filtres',
+                      onAction: _resetFilters,
                     )
                   else
                     ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: allTxs.length,
+                      itemCount: filteredTxs.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
-                        final tx = allTxs[index];
+                        final tx = filteredTxs[index];
                         final isIncome = tx.type == TransactionType.income;
                         final isExpense = tx.type == TransactionType.expense;
 
@@ -528,9 +859,21 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.borderLight),
+                            border: Border.all(
+                              color: tx.status == TransactionStatus.pending
+                                  ? AppColors.warning.withValues(alpha: 0.5)
+                                  : AppColors.borderLight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(10),
@@ -564,9 +907,11 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                                     Text(
                                       tx.description,
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.bold, fontSize: 14),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
                                     ),
-                                    const SizedBox(height: 2),
+                                    const SizedBox(height: 3),
                                     Text(
                                       '${DateFormat("dd/MM/yyyy").format(tx.date)} • ${tx.category} • ${tx.paymentMode}',
                                       style: TextStyle(
@@ -574,9 +919,31 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                                         color: Theme.of(context).textTheme.bodySmall?.color,
                                       ),
                                     ),
+                                    if (tx.reference != null && tx.reference!.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Réf : ${tx.reference}',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                    if (tx.createdByName.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Saisie par : ${tx.createdByName}',
+                                        style: const TextStyle(
+                                          fontSize: 10.5,
+                                          color: AppColors.textMutedLight,
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
@@ -592,35 +959,42 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                                               : AppColors.primary,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 6),
                                   if (tx.status == TransactionStatus.pending && canApprove)
-                                    InkWell(
-                                      onTap: () => _validatePendingTx(tx),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.warningLight,
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.warning,
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        minimumSize: Size.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(6),
                                         ),
-                                        child: const Text(
-                                          'Valider',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.warning,
-                                          ),
-                                        ),
                                       ),
+                                      icon: const Icon(Icons.check, size: 14),
+                                      label: const Text('Valider', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                      onPressed: () => _validatePendingTx(tx),
                                     )
                                   else
-                                    Text(
-                                      tx.status.label,
-                                      style: TextStyle(
-                                        fontSize: 11,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
                                         color: tx.status == TransactionStatus.validated
-                                            ? AppColors.success
-                                            : AppColors.textMutedLight,
+                                            ? AppColors.successLight
+                                            : AppColors.borderLight,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        tx.status.label,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: tx.status == TransactionStatus.validated
+                                              ? AppColors.success
+                                              : AppColors.textSecondaryLight,
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -635,7 +1009,10 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
             );
           },
           loading: () => const LoadingStateView(message: 'Calcul de la trésorerie...'),
-          error: (e, _) => Center(child: Text('Erreur : ${e.toString()}')),
+          error: (e, _) => ErrorStateView(
+            message: e.toString(),
+            onRetry: () => ref.refresh(recentTransactionsProvider),
+          ),
         ),
       ),
     );

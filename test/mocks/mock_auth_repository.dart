@@ -30,6 +30,20 @@ class MockAuthRepository implements BaseAuthRepository {
   }
 
   @override
+  Future<AppUser?> signInAsDemoUser({UserRole role = UserRole.admin}) async {
+    _user = AppUser(
+      uid: 'mock-demo-user',
+      email: 'demo@ajra.org',
+      displayName: 'Admin Test AJRA',
+      role: role,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    _controller.add(_user);
+    return _user;
+  }
+
+  @override
   Future<void> signOut() async {
     _user = null;
     _controller.add(null);
@@ -41,5 +55,15 @@ class MockAuthRepository implements BaseAuthRepository {
   @override
   Future<void> deleteAccount() async {
     await signOut();
+  }
+
+  @override
+  Future<void> deleteUserAccountAndDataByAdmin({
+    required String targetUserId,
+    required String targetEmail,
+    required String adminUserId,
+    required String adminName,
+  }) async {
+    // Mock implementation for unit tests
   }
 }

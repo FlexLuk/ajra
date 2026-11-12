@@ -151,8 +151,7 @@ class _MembershipApplyScreenState extends ConsumerState<MembershipApplyScreen> {
         updatedAt: DateTime.now(),
       );
 
-      final repo = ref.read(membershipRepositoryProvider);
-      await repo.submitApplication(profile);
+      await ref.read(membershipRepositoryProvider).submitApplication(profile);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -182,6 +181,17 @@ class _MembershipApplyScreenState extends ConsumerState<MembershipApplyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Retour',
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go('/dashboard');
+            }
+          },
+        ),
         title: const Text('Demande d\'adhésion AJRA'),
       ),
       body: SafeArea(
@@ -277,7 +287,9 @@ class _MembershipApplyScreenState extends ConsumerState<MembershipApplyScreen> {
                     Expanded(
                       child: AjraTextField(
                         controller: _emailController,
-                        label: 'Adresse e-mail *',
+                        label: 'Adresse e-mail (liée au compte) *',
+                        hint: 'Compte Google connecté',
+                        readOnly: true,
                         keyboardType: TextInputType.emailAddress,
                         validator: (v) => v == null || !v.contains('@') ? 'E-mail invalide' : null,
                       ),

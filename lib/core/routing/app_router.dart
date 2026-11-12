@@ -9,19 +9,24 @@ import '../../features/auth/screens/splash_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/dues/screens/dues_list_screen.dart';
 import '../../features/events/screens/events_list_screen.dart';
+import '../../features/membership/providers/membership_provider.dart';
 import '../../features/membership/screens/members_list_screen.dart';
 import '../../features/membership/screens/membership_apply_screen.dart';
 import '../../features/membership/screens/membership_status_screen.dart';
+import '../../features/loans/screens/loans_screen.dart';
 import '../../features/membership_fees/screens/membership_fee_screen.dart';
 import '../../features/messaging/screens/conversations_screen.dart';
+import '../../features/messaging/screens/chat_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/posts/screens/posts_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/treasury/screens/treasury_dashboard_screen.dart';
 import '../../features/user_profile/screens/profile_screen.dart';
+import '../../features/about/screens/about_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  ref.watch(authStateProvider);
+  final isValidatedAndActive = ref.watch(isMemberValidatedAndActiveProvider);
 
   return GoRouter(
     initialLocation: '/splash',
@@ -63,6 +68,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const TreasuryDashboardScreen(),
       ),
       GoRoute(
+        path: '/loans',
+        builder: (context, state) => const LoansScreen(),
+      ),
+      GoRoute(
         path: '/events',
         builder: (context, state) => const EventsListScreen(),
       ),
@@ -79,8 +88,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ConversationsScreen(),
       ),
       GoRoute(
+        path: '/chat/:convId',
+        builder: (context, state) {
+          final convId = state.pathParameters['convId'] ?? '';
+          return ChatScreen(
+            conversationId: convId,
+            otherParticipantName: 'Discussion',
+          );
+        },
+      ),
+      GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/about',
+        builder: (context, state) => const AboutScreen(),
       ),
       GoRoute(
         path: '/admin/roles',
@@ -108,7 +131,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (isLoggedIn && isLoggingIn) {
-        return '/dashboard';
+        return isValidatedAndActive ? '/dashboard' : '/membership-status';
+      }
+
+      // GARDE DE CONFIDENTIALITÉ AJRA :
+      // Tout utilisateur connecté non validé / non adhérent (et non admin)
+      // a accès à la page de suivi de sa demande, ses statuts AJRA/RPD et son profil.
+      if (isLoggedIn && !isValidatedAndActive) {
+        const allowedUnvalidatedRoutes = [
+          '/membership-status',
+          '/membership-apply',
+          '/membership-fee',
+          '/about',
+          '/profile',
+        ];
+        if (!allowedUnvalidatedRoutes.contains(state.matchedLocation)) {
+          return '/membership-status';
+        }
+        return null;
       }
 
       // Protection des routes admin

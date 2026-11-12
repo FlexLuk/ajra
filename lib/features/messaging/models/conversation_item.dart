@@ -7,6 +7,9 @@ class ConversationItem {
   final DateTime lastMessageTime;
   final String lastSenderId;
   final Map<String, int> unreadCounts;
+  final bool isGroup;
+  final String? groupName;
+  final String? groupAdminId;
 
   const ConversationItem({
     required this.id,
@@ -17,16 +20,35 @@ class ConversationItem {
     required this.lastMessageTime,
     required this.lastSenderId,
     this.unreadCounts = const {},
+    this.isGroup = false,
+    this.groupName,
+    this.groupAdminId,
   });
 
-  String getOtherParticipantName(String currentUserId) {
+  String getDisplayName(String currentUserId) {
+    if (isGroup && groupName != null && groupName!.trim().isNotEmpty) {
+      return groupName!;
+    }
     for (final entry in participantNames.entries) {
       if (entry.key != currentUserId) return entry.value;
     }
-    return 'Membre AJRA';
+    return isGroup ? 'Groupe AJRA' : 'Membre AJRA';
+  }
+
+  String getOtherParticipantName(String currentUserId) {
+    return getDisplayName(currentUserId);
+  }
+
+  String? getOtherParticipantId(String currentUserId) {
+    if (isGroup) return null;
+    for (final id in participantIds) {
+      if (id != currentUserId) return id;
+    }
+    return null;
   }
 
   String? getOtherParticipantAvatar(String currentUserId) {
+    if (isGroup) return null;
     for (final entry in participantAvatars.entries) {
       if (entry.key != currentUserId) return entry.value;
     }
@@ -60,6 +82,9 @@ class ConversationItem {
             (k, v) => MapEntry(k, (v as num).toInt()),
           ) ??
           {},
+      isGroup: (json['isGroup'] as bool?) ?? false,
+      groupName: json['groupName'] as String?,
+      groupAdminId: json['groupAdminId'] as String?,
     );
   }
 
@@ -72,6 +97,9 @@ class ConversationItem {
       'lastMessageTime': lastMessageTime.toIso8601String(),
       'lastSenderId': lastSenderId,
       'unreadCounts': unreadCounts,
+      'isGroup': isGroup,
+      'groupName': groupName,
+      'groupAdminId': groupAdminId,
     };
   }
 }

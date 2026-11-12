@@ -6,6 +6,44 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ],
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(html|js|json)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
   "emulators": {
     "auth": {
       "port": 9099
@@ -22,6 +60,28 @@
     "ui": {
       "enabled": true,
       "port": 4000
+    }
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "ajra-app-8ae42",
+          "appId": "1:682841193589:android:430950f6072bc9b5ce8c3c",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ajra-app-8ae42",
+          "configurations": {
+            "android": "1:682841193589:android:430950f6072bc9b5ce8c3c",
+            "ios": "1:682841193589:ios:059f93e67a9db3d6ce8c3c",
+            "web": "1:682841193589:web:4e19112847e42844ce8c3c",
+            "windows": "1:682841193589:web:845470d6dea3aa9ece8c3c"
+          }
+        }
+      }
     }
   }
 }

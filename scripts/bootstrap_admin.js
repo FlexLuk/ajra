@@ -43,7 +43,7 @@ async function main() {
         credential: admin.credential.cert(require(keyPath)),
       });
     } else {
-      admin.initializeApp({ projectId: 'ajra-app' });
+      admin.initializeApp({ projectId: 'ajra-app-8ae42' });
     }
   }
 

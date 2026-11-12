@@ -42,32 +42,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 90,
-                height: 90,
+                width: 110,
+                height: 110,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primaryLight, AppColors.secondary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
+                  shape: BoxShape.circle,
+                  color: Colors.white,
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.secondary.withValues(alpha: 0.4),
-                      blurRadius: 20,
+                      blurRadius: 24,
                       offset: const Offset(0, 10),
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'AJRA',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
+                child: ClipOval(
+                  child: Image.asset(
+                    AppConstants.logoAsset,
+                    width: 110,
+                    height: 110,
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),

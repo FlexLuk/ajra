@@ -17,7 +17,7 @@ class MembershipFeeConfig {
 
   factory MembershipFeeConfig.defaultConfig() {
     return MembershipFeeConfig(
-      amount: Money.fromRupees(500), // 500 MUR par défaut
+      amount: Money.fromRupees(1000), // 1000 MUR par défaut
       effectiveDate: DateTime(2026, 1, 1),
       updatedByUserId: 'system',
       updatedByName: 'Système AJRA',
@@ -25,8 +25,10 @@ class MembershipFeeConfig {
   }
 
   factory MembershipFeeConfig.fromJson(Map<String, dynamic> json) {
+    final rawCents = (json['amountCents'] as num?)?.toInt() ?? 100000;
+    final effectiveCents = rawCents == 50000 ? 100000 : rawCents;
     return MembershipFeeConfig(
-      amount: Money.fromCents((json['amountCents'] as num?)?.toInt() ?? 50000),
+      amount: Money.fromCents(effectiveCents),
       effectiveDate: DateTime.tryParse(json['effectiveDate']?.toString() ?? '') ?? DateTime.now(),
       updatedByUserId: (json['updatedByUserId'] as String?) ?? 'system',
       updatedByName: (json['updatedByName'] as String?) ?? 'Système',

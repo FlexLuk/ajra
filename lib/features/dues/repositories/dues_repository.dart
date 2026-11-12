@@ -37,6 +37,11 @@ abstract class BaseDuesRepository {
     String accountId = AppConstants.accountCash,
     String? notes,
   });
+  Future<void> deleteDue({
+    required String dueId,
+    required String adminUserId,
+    required String adminName,
+  });
 }
 
 class FirestoreDuesRepository implements BaseDuesRepository {
@@ -64,36 +69,44 @@ class FirestoreDuesRepository implements BaseDuesRepository {
   Stream<List<MonthlyDue>> watchUserDues(String userId) {
     return _duesCol
         .where('userId', isEqualTo: userId)
-        .orderBy('periodYear', descending: true)
-        .orderBy('periodMonth', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final list = snapshot.docs
           .map((doc) => MonthlyDue.fromJson(doc.data(), doc.id))
           .toList();
+      list.sort((a, b) {
+        final cmp = b.periodYear.compareTo(a.periodYear);
+        if (cmp != 0) return cmp;
+        return b.periodMonth.compareTo(a.periodMonth);
+      });
+      return list;
     });
   }
 
   @override
   Stream<List<MonthlyDue>> watchAllDues({int? year, int? month, DueStatus? status}) {
-    Query<Map<String, dynamic>> query = _duesCol
-        .orderBy('periodYear', descending: true)
-        .orderBy('periodMonth', descending: true);
-
-    if (year != null) {
-      query = query.where('periodYear', isEqualTo: year);
-    }
-    if (month != null) {
-      query = query.where('periodMonth', isEqualTo: month);
-    }
-    if (status != null) {
-      query = query.where('status', isEqualTo: status.name);
-    }
-
-    return query.snapshots().map((snapshot) {
-      return snapshot.docs
+    return _duesCol.snapshots().map((snapshot) {
+      var list = snapshot.docs
           .map((doc) => MonthlyDue.fromJson(doc.data(), doc.id))
           .toList();
+
+      if (year != null) {
+        list = list.where((d) => d.periodYear == year).toList();
+      }
+      if (month != null) {
+        list = list.where((d) => d.periodMonth == month).toList();
+      }
+      if (status != null) {
+        list = list.where((d) => d.status == status).toList();
+      }
+
+      list.sort((a, b) {
+        final cmp = b.periodYear.compareTo(a.periodYear);
+        if (cmp != 0) return cmp;
+        return b.periodMonth.compareTo(a.periodMonth);
+      });
+
+      return list;
     });
   }
 
@@ -110,9 +123,24 @@ class FirestoreDuesRepository implements BaseDuesRepository {
         .where('status', isEqualTo: MembershipStatus.active.name)
         .get();
 
-    final activeMembers = activeMembersSnapshot.docs
+    final rawMembers = activeMembersSnapshot.docs
         .map((d) => MemberProfile.fromJson(d.data(), d.id))
         .toList();
+
+    // Déduplication stricte par userId et par email pour éviter de générer des cotisations en double
+    final seenUserIds = <String>{};
+    final seenEmails = <String>{};
+    final activeMembers = <MemberProfile>[];
+
+    for (final m in rawMembers) {
+      if (seenUserIds.contains(m.userId)) continue;
+      final normEmail = m.email.trim().toLowerCase();
+      if (normEmail.isNotEmpty && seenEmails.contains(normEmail)) continue;
+
+      seenUserIds.add(m.userId);
+      if (normEmail.isNotEmpty) seenEmails.add(normEmail);
+      activeMembers.add(m);
+    }
 
     final monthName = DateFormat('MMMM yyyy', 'fr_FR').format(DateTime(year, month));
     final periodLabel = monthName[0].toUpperCase() + monthName.substring(1);
@@ -231,9 +259,11 @@ class FirestoreDuesRepository implements BaseDuesRepository {
       if (!dueSnapshot.exists) throw Exception('Cotisation introuvable');
       final due = MonthlyDue.fromJson(dueSnapshot.data()!, dueId);
 
-      // Règle de séparation des fonctions: ne peut s'auto-valider
-      if (due.userId == verifierUserId) {
-        throw Exception('Règle de sécurité : Vous ne pouvez pas confirmer votre propre cotisation.');
+      // TOUTES LES LECTURES (READS) DOIVENT ÊTRE EXÉCUTÉES AVANT LE PREMIER WRITE
+      final accountDocRef = _accountsCol.doc(accountId);
+      DocumentSnapshot<Map<String, dynamic>>? accountSnapshot;
+      if (approve) {
+        accountSnapshot = await transaction.get(accountDocRef);
       }
 
       final now = DateTime.now();
@@ -273,9 +303,7 @@ class FirestoreDuesRepository implements BaseDuesRepository {
         transaction.set(txDocRef, financialTx.toJson());
 
         // 2. Mettre à jour le solde du compte financier
-        final accountDocRef = _accountsCol.doc(accountId);
-        final accountSnapshot = await transaction.get(accountDocRef);
-        final currentCents = (accountSnapshot.data()?['currentBalanceCents'] as num?)?.toInt() ?? 0;
+        final currentCents = (accountSnapshot?.data()?['currentBalanceCents'] as num?)?.toInt() ?? 0;
         transaction.set(accountDocRef, {
           'currentBalanceCents': currentCents + verifiedAmount.cents,
           'updatedAt': now.toIso8601String(),
@@ -316,6 +344,97 @@ class FirestoreDuesRepository implements BaseDuesRepository {
         },
         'timestamp': now.toIso8601String(),
       });
+    });
+  }
+
+  @override
+  Future<void> deleteDue({
+    required String dueId,
+    required String adminUserId,
+    required String adminName,
+  }) async {
+    final docRef = _duesCol.doc(dueId);
+    final doc = await docRef.get();
+    if (!doc.exists) return;
+
+    final data = doc.data() ?? {};
+    final amountPaidCents = (data['amountPaidCents'] as num?)?.toInt() ?? 0;
+    final now = DateTime.now();
+
+    // Si la cotisation supprimée comportait un montant encaissé, créer une écriture de dépense
+    // de régularisation pour contrepasser l'encaissement et équilibrer le compte financier (caisse/banque/juice).
+    if (amountPaidCents > 0) {
+      String accountId = AppConstants.accountCash;
+      final txId = data['financialTransactionId'] as String?;
+      if (txId != null && txId.isNotEmpty) {
+        try {
+          final txDoc = await _txCol.doc(txId).get();
+          if (txDoc.exists) {
+            accountId = (txDoc.data()?['accountId'] as String?) ?? accountId;
+          }
+        } catch (_) {}
+      }
+
+      final expenseTxId = const Uuid().v4();
+      final memberName = data['memberName'] ?? 'Membre';
+      final periodYear = data['periodYear'] ?? '';
+      final periodMonth = data['periodMonth'] ?? '';
+
+      // 1. Créer la transaction de dépense d'équilibrage
+      final balancingTx = FinancialTransaction(
+        id: expenseTxId,
+        type: TransactionType.expense,
+        category: 'Régularisation doublon cotisation',
+        amount: Money.fromCents(amountPaidCents),
+        date: now,
+        description:
+            'Régularisation doublon / annulation cotisation : $memberName ($periodMonth/$periodYear)',
+        paymentMode: data['declaredPaymentMode'] ?? 'Virement/Espèces',
+        reference: 'REGUL-$dueId',
+        receiptUrl: null,
+        accountId: accountId,
+        createdByUserId: adminUserId,
+        createdByName: adminName,
+        validatedByUserId: adminUserId,
+        validatedByName: adminName,
+        status: TransactionStatus.validated,
+        linkedEntityType: 'dues_reversal',
+        linkedEntityId: dueId,
+        createdAt: now,
+        updatedAt: now,
+      );
+      await _txCol.doc(expenseTxId).set(balancingTx.toJson());
+
+      // 2. Déduire le montant du compte financier pour balancer la caisse
+      final accDocRef = _accountsCol.doc(accountId);
+      final accSnap = await accDocRef.get();
+      if (accSnap.exists) {
+        final currentCents = (accSnap.data()?['currentBalanceCents'] as num?)?.toInt() ?? 0;
+        await accDocRef.update({
+          'currentBalanceCents': currentCents - amountPaidCents,
+          'updatedAt': now.toIso8601String(),
+        });
+      }
+    }
+
+    await docRef.delete();
+
+    // Audit Log
+    await _auditCol.doc().set({
+      'userId': adminUserId,
+      'userName': adminName,
+      'userRole': UserRole.admin.code,
+      'action': 'dues.deleted',
+      'entityType': 'due',
+      'entityId': dueId,
+      'details': {
+        'dueId': dueId,
+        'userId': data['userId'],
+        'memberName': data['memberName'],
+        'period': '${data['periodYear']}_${data['periodMonth']}',
+        'amountPaidCentsReversed': amountPaidCents,
+      },
+      'timestamp': now.toIso8601String(),
     });
   }
 }

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../notifications/services/notification_service.dart';
 import '../models/conversation_item.dart';
 
 abstract class BaseMessagingRepository {
@@ -14,12 +15,18 @@ abstract class BaseMessagingRepository {
     required String otherUserName,
     String? otherUserAvatar,
   });
+  Future<String> createGroupConversation({
+    required String groupName,
+    required List<String> participantIds,
+    required Map<String, String> participantNames,
+    required String createdByUserId,
+  });
   Future<void> sendMessage({
     required String conversationId,
     required String senderId,
     required String senderName,
     required String text,
-    required String recipientId,
+    String? recipientId,
   });
   Future<void> markAsRead({
     required String conversationId,
@@ -43,12 +50,13 @@ class FirestoreMessagingRepository implements BaseMessagingRepository {
   Stream<List<ConversationItem>> watchUserConversations(String userId) {
     return _convCol
         .where('participantIds', arrayContains: userId)
-        .orderBy('lastMessageTime', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final list = snapshot.docs
           .map((doc) => ConversationItem.fromJson(doc.data(), doc.id))
           .toList();
+      list.sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime));
+      return list;
     });
   }
 
@@ -56,13 +64,13 @@ class FirestoreMessagingRepository implements BaseMessagingRepository {
   Stream<List<MessageItem>> watchMessages(String conversationId) {
     return _messagesCol
         .where('conversationId', isEqualTo: conversationId)
-        .orderBy('sentAt', descending: true)
-        .limit(50)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final list = snapshot.docs
           .map((doc) => MessageItem.fromJson(doc.data(), doc.id))
           .toList();
+      list.sort((a, b) => b.sentAt.compareTo(a.sentAt));
+      return list;
     });
   }
 
@@ -75,14 +83,16 @@ class FirestoreMessagingRepository implements BaseMessagingRepository {
     required String otherUserName,
     String? otherUserAvatar,
   }) async {
-    // Vérifier si une conversation existe déjà entre ces deux membres
+    // Vérifier si une conversation 1-to-1 existe déjà entre ces deux membres
     final query = await _convCol
         .where('participantIds', arrayContains: currentUserId)
         .get();
 
     for (final doc in query.docs) {
+      final isGroup = (doc.data()['isGroup'] as bool?) ?? false;
+      if (isGroup) continue;
       final list = (doc.data()['participantIds'] as List<dynamic>?)?.map((e) => e.toString()).toList();
-      if (list != null && list.contains(otherUserId)) {
+      if (list != null && list.contains(otherUserId) && list.length == 2) {
         return doc.id;
       }
     }
@@ -105,9 +115,50 @@ class FirestoreMessagingRepository implements BaseMessagingRepository {
       lastMessageText: 'Conversation démarrée',
       lastMessageTime: now,
       lastSenderId: currentUserId,
+      isGroup: false,
     );
 
     await _convCol.doc(convId).set(newConv.toJson());
+    return convId;
+  }
+
+  @override
+  Future<String> createGroupConversation({
+    required String groupName,
+    required List<String> participantIds,
+    required Map<String, String> participantNames,
+    required String createdByUserId,
+  }) async {
+    final convId = const Uuid().v4();
+    final now = DateTime.now();
+
+    final newConv = ConversationItem(
+      id: convId,
+      participantIds: participantIds,
+      participantNames: participantNames,
+      participantAvatars: {},
+      lastMessageText: 'Groupe créé par les membres',
+      lastMessageTime: now,
+      lastSenderId: createdByUserId,
+      isGroup: true,
+      groupName: groupName.trim(),
+      groupAdminId: createdByUserId,
+    );
+
+    await _convCol.doc(convId).set(newConv.toJson());
+
+    final messageId = const Uuid().v4();
+    final initialMessage = MessageItem(
+      id: messageId,
+      conversationId: convId,
+      senderId: 'system',
+      senderName: 'AJRA',
+      text: 'Bienvenue dans le groupe "$groupName" !',
+      sentAt: now,
+      isRead: true,
+    );
+    await _messagesCol.doc(messageId).set(initialMessage.toJson());
+
     return convId;
   }
 
@@ -117,7 +168,7 @@ class FirestoreMessagingRepository implements BaseMessagingRepository {
     required String senderId,
     required String senderName,
     required String text,
-    required String recipientId,
+    String? recipientId,
   }) async {
     final now = DateTime.now();
     final messageId = const Uuid().v4();
@@ -135,12 +186,57 @@ class FirestoreMessagingRepository implements BaseMessagingRepository {
     await _messagesCol.doc(messageId).set(message.toJson());
 
     // Mettre à jour le résumé de conversation
-    await _convCol.doc(conversationId).update({
+    final Map<String, dynamic> updates = {
       'lastMessageText': text.trim(),
       'lastMessageTime': now.toIso8601String(),
       'lastSenderId': senderId,
-      'unreadCounts.$recipientId': FieldValue.increment(1),
-    });
+    };
+
+    // 1. Lire la conversation pour identifier tous les participants
+    DocumentSnapshot<Map<String, dynamic>>? convDoc;
+    try {
+      convDoc = await _convCol.doc(conversationId).get();
+    } catch (_) {}
+
+    final convData = convDoc?.data() ?? {};
+    final isGroup = (convData['isGroup'] as bool?) ?? false;
+    final groupName = (convData['groupName'] as String?) ?? 'Groupe';
+    final pIds = (convData['participantIds'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+
+    final Set<String> targetRecipients = {};
+    if (recipientId != null && recipientId.isNotEmpty && recipientId != 'group') {
+      targetRecipients.add(recipientId);
+    }
+    for (final p in pIds) {
+      if (p != senderId) {
+        targetRecipients.add(p);
+      }
+    }
+
+    for (final recipientUid in targetRecipients) {
+      updates['unreadCounts.$recipientUid'] = FieldValue.increment(1);
+    }
+
+    try {
+      await _convCol.doc(conversationId).update(updates);
+    } catch (_) {}
+
+    // 2. Envoyer systématiquement une notification à chaque destinataire
+    for (final recipientUid in targetRecipients) {
+      try {
+        await NotificationService.createUserNotification(
+          recipientUserId: recipientUid,
+          title: isGroup ? '$senderName ($groupName)' : 'Nouveau message de $senderName',
+          body: text.trim().length > 100 ? '${text.trim().substring(0, 100)}...' : text.trim(),
+          type: 'message',
+          targetRoute: '/chat/$conversationId',
+          entityType: 'conversation',
+          entityId: conversationId,
+          senderUserId: senderId,
+          senderName: senderName,
+        );
+      } catch (_) {}
+    }
   }
 
   @override

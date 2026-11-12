@@ -1,4 +1,4 @@
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 admin.initializeApp();
@@ -117,3 +117,165 @@ exports.onDuePaymentVerified = functions.firestore
 
     return null;
   });
+
+/**
+ * Supprime un compte utilisateur et ses données par un administrateur vérifié
+ */
+exports.deleteUserAccountByAdmin = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentification requise.');
+  }
+
+  const callerUid = context.auth.uid;
+  const callerUserDoc = await db.collection('users').doc(callerUid).get();
+  const callerEmail = (context.auth.token.email || '').toLowerCase().trim();
+
+  const isSuperAdmin = callerEmail === 'heriniaina.luk@gmail.com';
+  const isAdmin = isSuperAdmin || (callerUserDoc.exists && callerUserDoc.data().role === 'ADMIN');
+
+  if (!isAdmin) {
+    throw new functions.https.HttpsError('permission-denied', 'Seul un administrateur peut supprimer un compte.');
+  }
+
+  const { targetUid } = data;
+  if (!targetUid) {
+    throw new functions.https.HttpsError('invalid-argument', 'UID cible requis.');
+  }
+
+  if (targetUid === callerUid) {
+    throw new functions.https.HttpsError('failed-precondition', 'L\'administrateur ne peut pas supprimer son propre compte.');
+  }
+
+  const targetUserDoc = await db.collection('users').doc(targetUid).get();
+  const targetEmail = (targetUserDoc.exists && targetUserDoc.data().email) || '';
+  if (targetEmail.toLowerCase().trim() === 'heriniaina.luk@gmail.com') {
+    throw new functions.https.HttpsError('permission-denied', 'Impossible de supprimer le compte du super-administrateur principal.');
+  }
+
+  // 1. Supprimer le profil membre
+  await db.collection('members').doc(targetUid).delete().catch(() => {});
+
+  // 2. Supprimer les paiements d'adhésion
+  const paymentsSnap = await db.collection('membershipPayments').where('userId', '==', targetUid).get();
+  for (const doc of paymentsSnap.docs) {
+    await doc.ref.delete().catch(() => {});
+  }
+  await db.collection('membershipPayments').doc(targetUid).delete().catch(() => {});
+
+  // 3. Supprimer les cotisations
+  const duesSnap = await db.collection('dues').where('userId', '==', targetUid).get();
+  for (const doc of duesSnap.docs) {
+    await doc.ref.delete().catch(() => {});
+  }
+
+  // 4. Supprimer les participations aux événements
+  const partsSnap = await db.collection('eventParticipants').where('userId', '==', targetUid).get();
+  for (const doc of partsSnap.docs) {
+    await doc.ref.delete().catch(() => {});
+  }
+
+  // 5. Supprimer les contributions de collectes
+  const contribSnap = await db.collection('fundraisingContributions').where('userId', '==', targetUid).get();
+  for (const doc of contribSnap.docs) {
+    await doc.ref.delete().catch(() => {});
+  }
+
+  // 6. Supprimer les notifications
+  const notifsSnap = await db.collection('notifications').where('recipientUserId', '==', targetUid).get();
+  for (const doc of notifsSnap.docs) {
+    await doc.ref.delete().catch(() => {});
+  }
+
+  // 7. Supprimer les prêts
+  const loansSnap = await db.collection('memberLoans').where('borrowerUserId', '==', targetUid).get();
+  for (const doc of loansSnap.docs) {
+    await doc.ref.delete().catch(() => {});
+  }
+
+  // 8. Supprimer le document utilisateur
+  await db.collection('users').doc(targetUid).delete().catch(() => {});
+
+  // 9. Supprimer le compte Firebase Authentication
+  try {
+    await auth.deleteUser(targetUid);
+  } catch (err) {
+    console.error('Erreur suppression auth.deleteUser:', err);
+  }
+
+  // 10. Journal d'audit
+  const now = new Date().toISOString();
+  await db.collection('auditLogs').add({
+    userId: callerUid,
+    userName: (callerUserDoc.exists && callerUserDoc.data().displayName) || 'Admin',
+    userRole: 'ADMIN',
+    action: 'user.account_deleted_by_admin',
+    entityType: 'user',
+    entityId: targetUid,
+    details: { targetUid, targetEmail },
+    timestamp: now,
+  });
+
+  return { success: true };
+});
+
+/**
+ * Déclencheur: envoi d'une notification Push FCM haute priorité (fait sonner le téléphone même écran éteint)
+ * lors de la création d'une notification ou d'un message dans la collection `notifications`.
+ */
+exports.onNotificationCreated = functions.firestore
+  .document('notifications/{notifId}')
+  .onCreate(async (snap, context) => {
+    const data = snap.data();
+    if (!data) return null;
+
+    const title = data.title || 'AJRA';
+    const body = data.body || 'Vous avez une nouvelle notification.';
+    const recipientUserId = data.recipientUserId || 'all';
+    const notifId = context.params.notifId;
+
+    const androidConfig = {
+      priority: 'high',
+      ttl: 86400 * 1000,
+      notification: {
+        channelId: 'ajra_notifications_high_v2',
+        tag: String(notifId),
+        sound: 'default',
+        defaultSound: true,
+        defaultVibrateTimings: true,
+        priority: 'max',
+        visibility: 'public',
+      },
+    };
+
+    const payloadData = {
+      notificationId: String(notifId),
+      type: String(data.type || 'general'),
+      targetRoute: String(data.targetRoute || '/notifications'),
+      entityId: String(data.entityId || ''),
+      title: String(title),
+      body: String(body),
+    };
+
+    try {
+      if (recipientUserId === 'all') {
+        await admin.messaging().send({
+          topic: 'all_members',
+          notification: { title, body },
+          data: payloadData,
+          android: androidConfig,
+        });
+      } else {
+        await admin.messaging().send({
+          topic: `user_${recipientUserId}`,
+          notification: { title, body },
+          data: payloadData,
+          android: androidConfig,
+        });
+      }
+    } catch (err) {
+      console.error('Erreur envoi FCM onNotificationCreated:', err);
+    }
+
+    return null;
+  });
+

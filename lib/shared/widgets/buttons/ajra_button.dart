@@ -70,9 +70,9 @@ class AjraButton extends StatelessWidget {
           elevation: 0,
           side: borderSide,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
         ),
         child: isLoading
             ? SizedBox(
@@ -97,6 +97,7 @@ class AjraButton extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
                         color: fgColor,
                       ),
                       maxLines: 1,

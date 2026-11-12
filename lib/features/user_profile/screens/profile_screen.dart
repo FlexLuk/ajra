@@ -1,13 +1,20 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
+import '../../../shared/widgets/forms/ajra_date_field.dart';
 import '../../../shared/widgets/forms/ajra_text_field.dart';
 import '../../../shared/widgets/indicators/status_badge.dart';
+import '../../auth/models/app_user.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../membership/models/member_profile.dart';
 import '../../membership/providers/membership_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -18,6 +25,311 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  Future<void> _openEditProfileModal(AppUser user, MemberProfile? member) async {
+    String initialFirstName = member?.firstName ?? '';
+    String initialLastName = member?.lastName ?? '';
+    if (member == null && user.displayName.isNotEmpty) {
+      final parts = user.displayName.trim().split(RegExp(r'\s+'));
+      if (parts.isNotEmpty) initialFirstName = parts.first;
+      if (parts.length > 1) initialLastName = parts.sublist(1).join(' ');
+    }
+
+    final firstNameController = TextEditingController(text: initialFirstName);
+    final lastNameController = TextEditingController(text: initialLastName);
+    final phoneController = TextEditingController(text: member?.phone ?? '+230 ');
+    final addressController = TextEditingController(text: member?.residentialAddress ?? '');
+    final passportController = TextEditingController(text: member?.passportNumber ?? '');
+    final jobTitleController = TextEditingController(text: member?.jobTitle ?? '');
+    final employerController = TextEditingController(text: member?.employer ?? '');
+    final fieldOfStudyController = TextEditingController(text: member?.fieldOfStudy ?? '');
+    final institutionController = TextEditingController(text: member?.institution ?? '');
+
+    DateTime birthDate = member?.birthDate ?? DateTime(1998, 1, 1);
+    DateTime passportIssueDate = member?.passportIssueDate ?? DateTime(2022, 1, 1);
+    DateTime passportExpiryDate = member?.passportExpiryDate ?? DateTime(2028, 1, 1);
+    PermitType permitType = member?.permitType ?? PermitType.worker;
+    bool isSaving = false;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.edit_note_rounded, color: AppColors.primary),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Modifier mes informations',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Informations personnelles',
+                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AjraTextField(
+                          controller: firstNameController,
+                          label: 'Prénom *',
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: AjraTextField(
+                          controller: lastNameController,
+                          label: 'Nom *',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  AjraDateField(
+                    label: 'Date de naissance *',
+                    initialDate: birthDate,
+                    firstDate: DateTime(1940),
+                    lastDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
+                    onDateSelected: (d) => setModalState(() => birthDate = d),
+                  ),
+                  const SizedBox(height: 12),
+                  AjraTextField(
+                    controller: phoneController,
+                    label: 'Téléphone (Maurice) *',
+                    hint: '+230 5XXX XXXX',
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 12),
+                  AjraTextField(
+                    controller: addressController,
+                    label: 'Adresse de résidence à Maurice *',
+                    hint: 'ex: Port-Louis, Rose-Hill, Flic en Flac...',
+                  ),
+                  const Divider(height: 24),
+                  const Text(
+                    'Passeport & Séjour à Maurice',
+                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                  const SizedBox(height: 10),
+                  AjraTextField(
+                    controller: passportController,
+                    label: 'Numéro de passeport *',
+                    hint: 'ex: A1234567',
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AjraDateField(
+                          label: 'Délivrance *',
+                          initialDate: passportIssueDate,
+                          firstDate: DateTime(2010),
+                          lastDate: DateTime.now(),
+                          onDateSelected: (d) => setModalState(() => passportIssueDate = d),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: AjraDateField(
+                          label: 'Expiration *',
+                          initialDate: passportExpiryDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now().add(const Duration(days: 365 * 15)),
+                          onDateSelected: (d) => setModalState(() => passportExpiryDate = d),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Center(child: Text('Travailleur')),
+                          selected: permitType == PermitType.worker,
+                          selectedColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                          onSelected: (val) {
+                            if (val) setModalState(() => permitType = PermitType.worker);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Center(child: Text('Étudiant')),
+                          selected: permitType == PermitType.student,
+                          selectedColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                          onSelected: (val) {
+                            if (val) setModalState(() => permitType = PermitType.student);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (permitType == PermitType.worker) ...[
+                    AjraTextField(
+                      controller: jobTitleController,
+                      label: 'Profession / Poste occupé',
+                      hint: 'ex: Comptable, Développeur, Hôtellerie...',
+                    ),
+                    const SizedBox(height: 12),
+                    AjraTextField(
+                      controller: employerController,
+                      label: 'Entreprise / Employeur',
+                      hint: 'ex: Société XYZ Ltd',
+                    ),
+                  ] else ...[
+                    AjraTextField(
+                      controller: fieldOfStudyController,
+                      label: 'Domaine d\'études / Filière',
+                      hint: 'ex: Informatique, Gestion, Finance...',
+                    ),
+                    const SizedBox(height: 12),
+                    AjraTextField(
+                      controller: institutionController,
+                      label: 'Établissement / Université',
+                      hint: 'ex: Université de Maurice, Curtin...',
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(ctx, false),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton.icon(
+              icon: isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.save_outlined, size: 18),
+              label: const Text('Enregistrer'),
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      final fName = firstNameController.text.trim();
+                      final lName = lastNameController.text.trim();
+                      if (fName.isEmpty || lName.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Veuillez renseigner votre prénom et votre nom.')),
+                        );
+                        return;
+                      }
+
+                      setModalState(() => isSaving = true);
+                      try {
+                        final repo = ref.read(membershipRepositoryProvider);
+                        if (member != null) {
+                          await repo.updateMemberProfile(
+                            userId: user.uid,
+                            firstName: fName,
+                            lastName: lName,
+                            birthDate: birthDate,
+                            residentialAddress: addressController.text.trim(),
+                            phone: phoneController.text.trim(),
+                            passportNumber: passportController.text.trim(),
+                            passportIssueDate: passportIssueDate,
+                            passportExpiryDate: passportExpiryDate,
+                            permitType: permitType,
+                            jobTitle: jobTitleController.text.trim(),
+                            employer: employerController.text.trim(),
+                            fieldOfStudy: fieldOfStudyController.text.trim(),
+                            institution: institutionController.text.trim(),
+                          );
+                        } else {
+                          final fullName = '$fName $lName'.trim();
+                          await FirebaseFirestore.instance
+                              .collection(AppConstants.colUsers)
+                              .doc(user.uid)
+                              .update({
+                            'displayName': fullName,
+                            'updatedAt': DateTime.now().toIso8601String(),
+                          });
+
+                          if (addressController.text.trim().isNotEmpty ||
+                              passportController.text.trim().isNotEmpty) {
+                            final shortId = const Uuid().v4().substring(0, 6).toUpperCase();
+                            final newProfile = MemberProfile(
+                              id: user.uid,
+                              userId: user.uid,
+                              memberNumber: 'AJRA-${DateTime.now().year}-$shortId',
+                              lastName: lName,
+                              firstName: fName,
+                              birthDate: birthDate,
+                              residentialAddress: addressController.text.trim(),
+                              email: user.email,
+                              phone: phoneController.text.trim(),
+                              photoUrl: user.photoUrl,
+                              appliedAt: DateTime.now(),
+                              status: user.isAdmin ? MembershipStatus.active : MembershipStatus.pending,
+                              passportNumber: passportController.text.trim(),
+                              passportIssueDate: passportIssueDate,
+                              passportExpiryDate: passportExpiryDate,
+                              permitType: permitType,
+                              jobTitle: permitType == PermitType.worker ? jobTitleController.text.trim() : null,
+                              employer: permitType == PermitType.worker ? employerController.text.trim() : null,
+                              fieldOfStudy: permitType == PermitType.student ? fieldOfStudyController.text.trim() : null,
+                              institution: permitType == PermitType.student ? institutionController.text.trim() : null,
+                              createdAt: DateTime.now(),
+                              updatedAt: DateTime.now(),
+                            );
+                            await repo.submitApplication(newProfile);
+                          }
+                        }
+
+                        await ref.read(authRepositoryProvider).reloadUser();
+                        ref.invalidate(currentMemberProfileProvider);
+                        ref.invalidate(allMembersProvider);
+
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx, true);
+                        }
+                      } catch (e) {
+                        setModalState(() => isSaving = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppColors.danger,
+                              content: Text('Erreur lors de la mise à jour : $e'),
+                            ),
+                          );
+                        }
+                      }
+                    },
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.success,
+          content: Text('Vos informations de profil ont été mises à jour avec succès !'),
+        ),
+      );
+    }
+  }
+
   Future<void> _handleSignOut() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -81,8 +393,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Retour',
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go('/dashboard');
+            }
+          },
+        ),
         title: const Text('Mon Profil & Paramètres'),
         actions: [
+          if (user != null)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              tooltip: 'Modifier mes informations',
+              onPressed: () => _openEditProfileModal(user, member),
+            ),
           IconButton(
             icon: const Icon(Icons.logout, color: AppColors.danger),
             tooltip: 'Déconnexion',
@@ -104,53 +433,68 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.borderLight),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 36,
-                      backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
-                      backgroundImage:
-                          user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
-                      child: user?.photoUrl == null
-                          ? Text(
-                              user != null && user.displayName.isNotEmpty
-                                  ? user.displayName[0].toUpperCase()
-                                  : 'U',
-                              style: const TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            )
-                          : null,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user?.displayName ?? 'Membre',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            user?.email ?? '',
-                            style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 36,
+                          backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
+                          backgroundImage:
+                              user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
+                          child: user?.photoUrl == null
+                              ? Text(
+                                  user != null && user.displayName.isNotEmpty
+                                      ? user.displayName[0].toUpperCase()
+                                      : 'U',
+                                  style: const TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              StatusBadge.fromRole(role),
-                              if (member != null) ...[
-                                const SizedBox(width: 8),
-                                StatusBadge.fromMembershipStatus(member.status),
-                              ],
+                              Text(
+                                user?.displayName ?? 'Membre',
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                user?.email ?? '',
+                                style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+                              ),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: [
+                                  StatusBadge.fromRole(role),
+                                  if (member != null)
+                                    StatusBadge.fromMembershipStatus(member.status),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                    if (user != null) ...[
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.edit_note_rounded, size: 18),
+                          label: const Text('Modifier mes informations personnelles'),
+                          onPressed: () => _openEditProfileModal(user, member),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -168,16 +512,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Dossier d\'adhésion',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Dossier d\'adhésion & Informations',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                          if (user != null)
+                            TextButton.icon(
+                              icon: const Icon(Icons.edit_outlined, size: 16),
+                              label: const Text('Modifier', style: TextStyle(fontSize: 12.5)),
+                              onPressed: () => _openEditProfileModal(user, member),
+                            ),
+                        ],
                       ),
                       const Divider(height: 20),
                       _buildInfoRow('Matricule AJRA', member.memberNumber),
+                      _buildInfoRow('Nom complet', member.fullName),
+                      _buildInfoRow('Date de naissance', DateFormat('dd/MM/yyyy').format(member.birthDate)),
                       _buildInfoRow('Téléphone', member.phone),
-                      _buildInfoRow('Adresse', member.residentialAddress),
+                      _buildInfoRow('Adresse à Maurice', member.residentialAddress),
                       _buildInfoRow('Statut de séjour', member.permitType.label),
-                      _buildInfoRow('Numéro de passeport', member.maskedPassportNumber),
+                      if (member.permitType == PermitType.worker) ...[
+                        if (member.jobTitle != null && member.jobTitle!.isNotEmpty)
+                          _buildInfoRow('Profession', member.jobTitle!),
+                        if (member.employer != null && member.employer!.isNotEmpty)
+                          _buildInfoRow('Employeur', member.employer!),
+                      ] else ...[
+                        if (member.fieldOfStudy != null && member.fieldOfStudy!.isNotEmpty)
+                          _buildInfoRow('Domaine d\'études', member.fieldOfStudy!),
+                        if (member.institution != null && member.institution!.isNotEmpty)
+                          _buildInfoRow('Établissement', member.institution!),
+                      ],
+                      _buildInfoRow('Numéro de passeport', member.passportNumber),
+                      _buildInfoRow('Expiration passeport', DateFormat('dd/MM/yyyy').format(member.passportExpiryDate)),
                       const SizedBox(height: 12),
                       OutlinedButton(
                         onPressed: () => context.go('/membership-status'),
@@ -275,7 +644,148 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
               ),
+              // About & Statuts Card
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderLight),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.gavel_rounded, color: AppColors.primary, size: 22),
+                        SizedBox(width: 8),
+                        Text(
+                          'Statuts de l\'AJRA & RPD',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Consultez les 15 statuts officiels fondateurs de l\'association, le règlement intérieur et la protection des données.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.menu_book_outlined, size: 18),
+                            label: const Text('Voir les Statuts & RPD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            onPressed: () => context.go('/about'),
+                          ),
+                        ),
+                        if (kIsWeb) ...[
+                          const SizedBox(width: 10),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF047857),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.download_rounded, size: 18),
+                            label: const Text('APK Android', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            onPressed: () => context.go('/about'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 24),
+
+              // Association Brand & About Card
+              Center(
+                child: InkWell(
+                  onTap: () => context.go('/about'),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              AppConstants.logoAsset,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.groups,
+                                color: AppColors.primary,
+                                size: 36,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          AppConstants.appFullName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimaryLight,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Île Maurice • Région Anosy (Madagascar)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'v1.4.8 (Release Production)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
             ],
           ),
         ),

@@ -50,6 +50,19 @@ class FinancialAccount {
     );
   }
 
+  factory FinancialAccount.juiceDefault() {
+    return FinancialAccount(
+      id: AppConstants.accountJuice,
+      name: 'Juice',
+      description: 'Compte Juice MCB associatif (Île Maurice)',
+      initialBalance: const Money.zero(),
+      currentBalance: const Money.zero(),
+      isDefault: false,
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+    );
+  }
+
   factory FinancialAccount.fromJson(Map<String, dynamic> json, String docId) {
     return FinancialAccount(
       id: docId,

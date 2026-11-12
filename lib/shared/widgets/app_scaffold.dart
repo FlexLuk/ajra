@@ -5,6 +5,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/security/roles_and_permissions.dart';
 import '../../core/theme/app_colors.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/notifications/screens/notifications_screen.dart';
 import 'indicators/status_badge.dart';
 
 class AppScaffold extends ConsumerWidget {
@@ -28,38 +29,83 @@ class AppScaffold extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.borderLight.withValues(alpha: 0.8), height: 1),
+        ),
+        leading: selectedIndex != 0
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Retour à l\'accueil',
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    context.go('/dashboard');
+                  }
+                },
+              )
+            : null,
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(8),
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(
+                  color: AppColors.primaryLight.withValues(alpha: 0.3),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: const Text(
-                'AJRA',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  letterSpacing: 1,
+              child: ClipOval(
+                child: Image.asset(
+                  AppConstants.logoAsset,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: AppColors.primary,
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'AJRA',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     AppConstants.appName,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      color: AppColors.textPrimaryLight,
+                    ),
                   ),
                   Text(
-                    AppConstants.appFullName,
+                    'Jeunes de la Région Anosy • Maurice',
                     style: TextStyle(
-                      fontSize: 10,
-                      color: Theme.of(context).textTheme.bodySmall?.color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondaryLight,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -71,29 +117,58 @@ class AppScaffold extends ConsumerWidget {
         ),
         actions: [
           StatusBadge.fromRole(role),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           IconButton(
-            icon: const Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(Icons.notifications_outlined),
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: CircleAvatar(
-                    radius: 4,
-                    backgroundColor: AppColors.danger,
-                  ),
+            icon: const Icon(Icons.chat_outlined),
+            tooltip: 'Messagerie & Groupes',
+            onPressed: () => context.go('/conversations'),
+          ),
+          Consumer(
+            builder: (context, ref, _) {
+              final unreadNotifsCount = ref.watch(unreadNotificationsCountProvider);
+
+              return IconButton(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.notifications_outlined),
+                    if (unreadNotifsCount > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            unreadNotifsCount > 9 ? '9+' : '$unreadNotifsCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
-            tooltip: 'Notifications',
-            onPressed: () => context.go('/notifications'),
+                tooltip: 'Notifications',
+                onPressed: () => context.go('/notifications'),
+              );
+            },
           ),
           IconButton(
             icon: CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
+              radius: 17,
+              backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
               backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
               child: user?.photoUrl == null
                   ? Text(
@@ -102,6 +177,7 @@ class AppScaffold extends ConsumerWidget {
                           : 'U',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
+                        fontSize: 13,
                         color: AppColors.primary,
                       ),
                     )
@@ -136,22 +212,29 @@ class AppScaffold extends ConsumerWidget {
       ),
       bottomNavigationBar: isWide
           ? null
-          : BottomNavigationBar(
-              currentIndex: selectedIndex.clamp(0, navItems.length - 1),
-              onTap: (index) {
-                final route = navItems[index].route;
-                context.go(route);
-              },
-              type: BottomNavigationBarType.fixed,
-              selectedItemColor: AppColors.primary,
-              unselectedItemColor: AppColors.textSecondaryLight,
-              items: navItems.map((item) {
-                return BottomNavigationBarItem(
-                  icon: Icon(item.icon),
-                  activeIcon: Icon(item.activeIcon ?? item.icon),
-                  label: item.label,
-                );
-              }).toList(),
+          : Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.borderLight.withValues(alpha: 0.8),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: NavigationBar(
+                selectedIndex: selectedIndex.clamp(0, navItems.length - 1),
+                onDestinationSelected: (index) {
+                  final route = navItems[index].route;
+                  context.go(route);
+                },
+                destinations: navItems.map((item) {
+                  return NavigationDestination(
+                    icon: Icon(item.icon),
+                    selectedIcon: Icon(item.activeIcon ?? item.icon),
+                    label: item.label,
+                  );
+                }).toList(),
+              ),
             ),
     );
   }

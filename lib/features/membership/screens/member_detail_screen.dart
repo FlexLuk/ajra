@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
@@ -128,21 +129,303 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
     }
   }
 
+  Future<void> _openAdminStatusDialog() async {
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser == null || !currentUser.isAdmin) return;
+
+    MembershipStatus selectedStatus = _member.status;
+    final notesController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          title: Text('Statut : ${_member.fullName}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Modifier le statut officiel du membre :'),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<MembershipStatus>(
+                value: selectedStatus,
+                decoration: const InputDecoration(labelText: 'Statut du membre'),
+                items: MembershipStatus.values.map((s) {
+                  return DropdownMenuItem(value: s, child: Text(s.label));
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) setModalState(() => selectedStatus = v);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Motif / Remarques administratives',
+                  hintText: 'ex: Validation directe par l\'administration...',
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Enregistrer le statut'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() => _isProcessing = true);
+      try {
+        final repo = ref.read(membershipRepositoryProvider);
+        await repo.updateMemberStatus(
+          memberId: _member.id,
+          newStatus: selectedStatus,
+          adminUserId: currentUser.uid,
+          adminName: currentUser.displayName,
+          notes: notesController.text.trim(),
+        );
+
+        final updated = await repo.getMemberProfile(_member.userId);
+        if (updated != null && mounted) {
+          setState(() => _member = updated);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: AppColors.success,
+              content: Text('Statut du membre mis à jour avec succès.'),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.danger,
+              content: Text('Erreur : ${e.toString()}'),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _handleDeleteMemberAccount() async {
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser == null || !currentUser.isAdmin) return;
+
+    if (_member.userId == currentUser.uid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vous ne pouvez pas supprimer votre propre compte.')),
+      );
+      return;
+    }
+
+    if (_member.email.toLowerCase().trim() == 'heriniaina.luk@gmail.com') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de supprimer le compte du super-administrateur.')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 28),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Suppression irréversible du compte',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Confirmez-vous la suppression intégrale du compte et de toutes les données de ${_member.fullName} (${_member.memberNumber}) ?',
+              style: const TextStyle(fontSize: 13.5),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Cette opération efface immédiatement :\n'
+              '• Le compte d\'accès et fiche utilisateur\n'
+              '• Le profil membre et numéro matricule\n'
+              '• Les paiements d\'adhésion, cotisations et prêts\n'
+              '• Les documents (passeport, photo, justificatifs)\n'
+              '• L\'historique des notifications et inscriptions',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.delete_forever, size: 18),
+            label: const Text('Supprimer définitivement'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() => _isProcessing = true);
+      try {
+        await ref.read(authRepositoryProvider).deleteUserAccountAndDataByAdmin(
+          targetUserId: _member.userId,
+          targetEmail: _member.email,
+          adminUserId: currentUser.uid,
+          adminName: currentUser.displayName,
+        );
+
+        ref.invalidate(allMembersProvider);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.success,
+              content: Text('Le compte et les données de ${_member.fullName} ont été supprimés.'),
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.danger,
+              content: Text('Erreur : ${e.toString()}'),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isProcessing = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
+    final canView = currentUser != null &&
+        (currentUser.isAdmin || currentUser.canReviewMembership || currentUser.uid == _member.userId);
+
+    if (!canView) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Retour',
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                context.go('/members');
+              }
+            },
+          ),
+          title: const Text('Accès restreint'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.lock_outline, size: 64, color: AppColors.textSecondaryLight),
+                const SizedBox(height: 16),
+                const Text(
+                  'Accès confidentiel',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Seuls les membres du bureau et l\'administrateur sont autorisés à consulter les informations personnelles et administratives des membres.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textSecondaryLight),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    } else {
+                      context.go('/members');
+                    }
+                  },
+                  child: const Text('Retour'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final isPrivileged = currentUser != null &&
         (currentUser.isAdmin || currentUser.canReviewMembership || currentUser.uid == _member.userId);
     final canReview = currentUser != null &&
-        (currentUser.isAdmin || currentUser.canReviewMembership) &&
-        currentUser.uid != _member.userId &&
+        (currentUser.isAdmin || (currentUser.canReviewMembership && currentUser.uid != _member.userId)) &&
         _member.isPending;
 
     final dateFormat = DateFormat('dd MMMM yyyy', 'fr_FR');
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Retour',
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go('/members');
+            }
+          },
+        ),
         title: Text(_member.fullName),
+        actions: [
+          if (currentUser != null && currentUser.isAdmin)
+            IconButton(
+              icon: const Icon(Icons.edit_note_outlined),
+              tooltip: 'Modifier le statut officiel',
+              onPressed: _openAdminStatusDialog,
+            ),
+          if (currentUser != null &&
+              currentUser.isAdmin &&
+              _member.userId != currentUser.uid &&
+              _member.email.toLowerCase().trim() != 'heriniaina.luk@gmail.com')
+            IconButton(
+              icon: const Icon(Icons.delete_forever_outlined, color: AppColors.danger),
+              tooltip: 'Supprimer ce compte et toutes ses données',
+              onPressed: _handleDeleteMemberAccount,
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -297,7 +580,63 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
                 ],
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+
+            // Statuts de l'AJRA & RPD
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderLight),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.gavel_rounded, color: AppColors.primary, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Statuts de l\'AJRA & RPD',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Les 15 statuts officiels fondateurs et la charte de protection des données régissent l\'association et l\'ensemble de ses membres.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.menu_book_outlined, size: 18),
+                      label: const Text('Consulter les 15 Statuts & RPD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      onPressed: () => context.go('/about'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
 
             // Actions de validation pour le bureau / admin
             if (canReview) ...[
@@ -343,6 +682,54 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            // Admin Danger Zone
+            if (currentUser != null &&
+                currentUser.isAdmin &&
+                _member.userId != currentUser.uid &&
+                _member.email.toLowerCase().trim() != 'heriniaina.luk@gmail.com') ...[
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.dangerLight),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Zone de danger (Administration)',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.danger,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'La suppression de ce compte effacera de manière irrévocable le compte utilisateur, son dossier d\'adhésion, ses cotisations, ses documents d\'identité et ses inscriptions.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                    ),
+                    const SizedBox(height: 14),
+                    AjraButton(
+                      label: 'Supprimer définitivement ce compte et ses données',
+                      icon: Icons.delete_forever,
+                      variant: AjraButtonVariant.danger,
+                      isLoading: _isProcessing,
+                      onPressed: _handleDeleteMemberAccount,
                     ),
                   ],
                 ),

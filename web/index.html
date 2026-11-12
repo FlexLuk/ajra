@@ -18,18 +18,17 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
-
+  <meta name="description" content="Association des Jeunes de la Région Anosy (AJRA) - Île Maurice">
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="ajra">
+  <meta name="apple-mobile-web-app-title" content="AJRA">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>ajra</title>
+  <title>AJRA - Association des Jeunes de la Région Anosy</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -41,6 +40,58 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    window.playNotificationChime = function() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        const now = ctx.currentTime;
+        osc.frequency.setValueAtTime(587.33, now);
+        osc.frequency.setValueAtTime(880, now + 0.1);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } catch(e) {
+        console.warn('Audio chime:', e);
+      }
+    };
+
+    window.showBrowserNotification = function(title, body) {
+      try {
+        if ('Notification' in window) {
+          if (Notification.permission === 'granted') {
+            new Notification(title || 'AJRA', {
+              body: body || '',
+              icon: 'icons/Icon-192.png'
+            });
+          } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(function(permission) {
+              if (permission === 'granted') {
+                new Notification(title || 'AJRA', {
+                  body: body || '',
+                  icon: 'icons/Icon-192.png'
+                });
+              }
+            });
+          }
+        }
+      } catch(e) {
+        console.warn('Browser notification:', e);
+      }
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

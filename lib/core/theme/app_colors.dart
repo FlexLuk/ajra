@@ -32,6 +32,7 @@ class AppColors {
   static const Color textPrimaryLight = Color(0xFF0F172A);
   static const Color textSecondaryLight = Color(0xFF64748B);
   static const Color textMutedLight = Color(0xFF94A3B8);
+  static const Color textTertiaryLight = textMutedLight;
   static const Color borderLight = Color(0xFFE2E8F0);
 
   // Neutral Colors (Dark mode)
@@ -41,5 +42,64 @@ class AppColors {
   static const Color textPrimaryDark = Color(0xFFF8FAFC);
   static const Color textSecondaryDark = Color(0xFF94A3B8);
   static const Color textMutedDark = Color(0xFF64748B);
+  static const Color textTertiaryDark = textMutedDark;
   static const Color borderDark = Color(0xFF334155);
+
+  // Modern Gradients (Inspired by the ocean, sun & AJRA seal)
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF0284C7)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient heroGradient = LinearGradient(
+    colors: [Color(0xFF0A2540), Color(0xFF1E3A8A), Color(0xFF0EA5E9)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient oceanicGradient = LinearGradient(
+    colors: [Color(0xFF0284C7), Color(0xFF0D9488)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient goldGradient = LinearGradient(
+    colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient glassGradient = LinearGradient(
+    colors: [Color(0xFFFFFFFF), Color(0xFFF8FAFC)],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  // Soft Modern Shadows
+  static const List<BoxShadow> cardShadow = [
+    BoxShadow(
+      color: Color(0x080F172A),
+      blurRadius: 16,
+      offset: Offset(0, 4),
+    ),
+    BoxShadow(
+      color: Color(0x050F172A),
+      blurRadius: 4,
+      offset: Offset(0, 1),
+    ),
+  ];
+
+  static const List<BoxShadow> elevatedCardShadow = [
+    BoxShadow(
+      color: Color(0x120F172A),
+      blurRadius: 24,
+      offset: Offset(0, 8),
+    ),
+    BoxShadow(
+      color: Color(0x080F172A),
+      blurRadius: 8,
+      offset: Offset(0, 2),
+    ),
+  ];
 }

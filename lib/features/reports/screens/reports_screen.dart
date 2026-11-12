@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
@@ -8,6 +9,7 @@ import '../../../shared/widgets/buttons/ajra_button.dart';
 import '../../accounting/models/financial_transaction.dart';
 import '../../accounting/repositories/accounting_repository.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../dues/widgets/dues_summary_share_dialog.dart';
 import '../../membership/providers/membership_provider.dart';
 import '../../treasury/screens/treasury_dashboard_screen.dart';
 import '../services/export_service.dart';
@@ -64,7 +66,20 @@ class ReportsScreen extends ConsumerWidget {
 
     if (!canViewReports) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Rapports')),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Retour',
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                context.go('/dashboard');
+              }
+            },
+          ),
+          title: const Text('Rapports'),
+        ),
         body: const Center(
           child: Text('Accès restreint aux utilisateurs habilités.'),
         ),
@@ -73,11 +88,38 @@ class ReportsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Retour',
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go('/dashboard');
+            }
+          },
+        ),
         title: const Text('Rapports & Exports Officiels'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Section Cotisations WhatsApp & PNG
+          _buildReportCard(
+            title: 'Point Cotisations Mensuelles (PNG & WhatsApp)',
+            description:
+                'Génère une infographie visuelle officielle haute définition (PNG) prête à être partagée sur WhatsApp ou téléchargée, avec le détail des cotisations du mois.',
+            icon: Icons.share_rounded,
+            actionLabel: 'Partager le récapitulatif',
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => const DuesSummaryShareDialog(),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+
           // Section Membres
           _buildReportCard(
             title: 'Registre des Membres (CSV)',

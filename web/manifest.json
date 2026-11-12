@@ -1,11 +1,11 @@
 {
-    "name": "ajra",
-    "short_name": "ajra",
+    "name": "AJRA — Association des Jeunes de la Région Anosy",
+    "short_name": "AJRA",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0F172A",
+    "theme_color": "#1E3A8A",
+    "description": "Application officielle de gestion de l'Association des Jeunes de la Région Anosy à l'Île Maurice.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
