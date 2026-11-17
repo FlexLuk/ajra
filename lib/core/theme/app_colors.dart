@@ -88,7 +88,7 @@ class AppColors {
     end: Alignment.bottomCenter,
   );
 
-  // Soft Modern Shadows
+  // Soft Modern Shadows & Ambient Elevations
   static const List<BoxShadow> cardShadow = [
     BoxShadow(
       color: Color(0x080F172A),
@@ -96,7 +96,7 @@ class AppColors {
       offset: Offset(0, 4),
     ),
     BoxShadow(
-      color: Color(0x050F172A),
+      color: Color(0x040F172A),
       blurRadius: 4,
       offset: Offset(0, 1),
     ),
@@ -109,9 +109,22 @@ class AppColors {
       offset: Offset(0, 8),
     ),
     BoxShadow(
-      color: Color(0x080F172A),
-      blurRadius: 8,
+      color: Color(0x060F172A),
+      blurRadius: 6,
       offset: Offset(0, 2),
+    ),
+  ];
+
+  static const List<BoxShadow> memberCardShadow = [
+    BoxShadow(
+      color: Color(0x3D0B192C),
+      blurRadius: 30,
+      offset: Offset(0, 14),
+    ),
+    BoxShadow(
+      color: Color(0x1F0F766E),
+      blurRadius: 12,
+      offset: Offset(0, 4),
     ),
   ];
 }

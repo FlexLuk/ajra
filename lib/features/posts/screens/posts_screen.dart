@@ -157,8 +157,9 @@ class _PostsScreenState extends ConsumerState<PostsScreen> {
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.borderLight),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.9)),
+                  boxShadow: AppColors.cardShadow,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

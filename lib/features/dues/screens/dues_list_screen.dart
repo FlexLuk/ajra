@@ -1093,23 +1093,29 @@ class _DuesListScreenState extends ConsumerState<DuesListScreen> with SingleTick
     final isPrivileged = currentUser != null &&
         (currentUser.isAdmin || currentUser.canVerifyPayments || currentUser.canRecordDues);
 
+    final Color statusColor = due.status == DueStatus.paid
+        ? AppColors.success
+        : (due.status == DueStatus.declared ? AppColors.warning : AppColors.danger);
+
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.9)),
+        boxShadow: AppColors.cardShadow,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(color: statusColor, width: 4.5),
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1249,6 +1255,8 @@ class _DuesListScreenState extends ConsumerState<DuesListScreen> with SingleTick
           ),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 }

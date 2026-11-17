@@ -61,9 +61,9 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(icon: Icon(Icons.gavel_rounded, size: 20), text: 'Statuts Officiels'),
-            Tab(icon: Icon(Icons.security_outlined, size: 20), text: 'RPD & Règlement'),
-            Tab(icon: Icon(Icons.info_outline, size: 20), text: 'Application (1.5.0)'),
+            Tab(icon: const Icon(Icons.gavel_rounded, size: 20), text: 'Statuts Officiels'),
+            Tab(icon: const Icon(Icons.security_outlined, size: 20), text: 'RPD & Règlement'),
+            Tab(icon: const Icon(Icons.info_outline, size: 20), text: 'Application (${AppConstants.appVersion})'),
           ],
         ),
       ),

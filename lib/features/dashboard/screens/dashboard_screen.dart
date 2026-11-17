@@ -9,6 +9,7 @@ import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
 import '../../../shared/widgets/cards/ajra_digital_member_card.dart';
 import '../../../shared/widgets/cards/metric_card.dart';
+import '../../../shared/widgets/indicators/status_badge.dart';
 import '../../accounting/models/financial_transaction.dart';
 import '../../auth/models/app_user.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -52,6 +53,43 @@ class DashboardScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Greeting & Date header
+                  if (user != null) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bonjour, ${user.displayName.isNotEmpty ? user.displayName.split(' ').first : 'Membre'} 👋',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.4,
+                                  color: AppColors.textPrimaryLight,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(DateTime.now()),
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.textSecondaryLight,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        StatusBadge.fromRole(role),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
                   // Digital Member ID Card (Hero)
                   if (user != null)
                     AjraDigitalMemberCard(
@@ -852,25 +890,25 @@ class DashboardScreen extends ConsumerWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => context.go(route),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.9)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.95)),
             boxShadow: AppColors.cardShadow,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(7),
+                padding: const EdgeInsets.all(7.5),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.11),
-                  borderRadius: BorderRadius.circular(9),
+                  color: AppColors.primaryLight.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: 16, color: AppColors.primary),
+                child: Icon(icon, size: 16.5, color: AppColors.primary),
               ),
               const SizedBox(width: 10),
               Flexible(

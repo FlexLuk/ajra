@@ -37,15 +37,22 @@ class AjraDigitalMemberCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: Container(
           decoration: BoxDecoration(
-            gradient: AppColors.memberCardGradient,
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF071424),
+                Color(0xFF0F2C4A),
+                Color(0xFF0B3A4F),
+                Color(0xFF084F59),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryDark.withValues(alpha: 0.32),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.16),
+              width: 1.2,
+            ),
+            boxShadow: AppColors.memberCardShadow,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),

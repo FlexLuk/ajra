@@ -400,18 +400,16 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+                        colors: [Color(0xFF091628), Color(0xFF0F2C4A), Color(0xFF0B3A4F)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.25),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        width: 1.2,
+                      ),
+                      boxShadow: AppColors.memberCardShadow,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

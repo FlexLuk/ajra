@@ -1084,7 +1084,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'v1.4.9 (Release Production)',
+                          'v${AppConstants.appVersion} (Release Production)',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,

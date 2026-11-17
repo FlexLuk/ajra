@@ -102,22 +102,36 @@ class MembersListScreen extends ConsumerWidget {
 
             // Search Bar
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: TextField(
-                onChanged: (val) {
-                  ref.read(memberSearchQueryProvider.notifier).state = val;
-                },
-                decoration: InputDecoration(
-                  hintText: 'Rechercher par nom, e-mail, matricule...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: ref.watch(memberSearchQueryProvider).isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            ref.read(memberSearchQueryProvider.notifier).state = '';
-                          },
-                        )
-                      : null,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: AppColors.cardShadow,
+                  border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.95)),
+                ),
+                child: TextField(
+                  onChanged: (val) {
+                    ref.read(memberSearchQueryProvider.notifier).state = val;
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Rechercher par nom, e-mail, matricule...',
+                    hintStyle: const TextStyle(fontSize: 13.5, color: AppColors.textMutedLight),
+                    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
+                    suffixIcon: ref.watch(memberSearchQueryProvider).isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () {
+                              ref.read(memberSearchQueryProvider.notifier).state = '';
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                  ),
                 ),
               ),
             ),
@@ -248,22 +262,52 @@ class MembersListScreen extends ConsumerWidget {
                       final isCurrentUser = currentUser?.uid == m.userId;
 
                       return Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: isCurrentUser
+                                ? AppColors.primary.withValues(alpha: 0.35)
+                                : AppColors.borderLight.withValues(alpha: 0.85),
+                            width: isCurrentUser ? 1.4 : 1,
+                          ),
+                        ),
                         child: ListTile(
                           contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                          leading: CircleAvatar(
-                            backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
-                            backgroundImage:
-                                m.photoUrl != null ? NetworkImage(m.photoUrl!) : null,
-                            child: m.photoUrl == null
-                                ? Text(
-                                    m.firstName.isNotEmpty ? m.firstName[0].toUpperCase() : 'M',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
+                              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 23,
+                                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
+                                backgroundImage:
+                                    m.photoUrl != null ? NetworkImage(m.photoUrl!) : null,
+                                child: m.photoUrl == null
+                                    ? Text(
+                                        m.firstName.isNotEmpty ? m.firstName[0].toUpperCase() : 'M',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                          color: AppColors.primary,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              if (m.isActive)
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.success,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
                                     ),
-                                  )
-                                : null,
+                                  ),
+                                ),
+                            ],
                           ),
                           title: Row(
                             children: [
@@ -279,10 +323,10 @@ class MembersListScreen extends ConsumerWidget {
                               if (isCurrentUser)
                                 Container(
                                   padding:
-                                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primaryLight.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(6),
+                                    color: AppColors.primaryLight.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: const Text(
                                     'Moi',
