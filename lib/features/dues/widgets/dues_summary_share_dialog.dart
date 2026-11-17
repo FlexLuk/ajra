@@ -1,12 +1,10 @@
 import 'dart:ui' as ui;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../models/monthly_due.dart';
@@ -134,10 +132,12 @@ class _DuesSummaryShareDialogState extends ConsumerState<DuesSummaryShareDialog>
         mimeType: 'image/png',
       );
 
-      await Share.shareXFiles(
-        [xFile],
-        text: textSummary,
-        subject: 'AJRA - Cotisations $_periodLabel',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [xFile],
+          text: textSummary,
+          subject: 'AJRA - Cotisations $_periodLabel',
+        ),
       );
     } catch (e) {
       if (mounted) {
@@ -165,7 +165,11 @@ class _DuesSummaryShareDialogState extends ConsumerState<DuesSummaryShareDialog>
         mimeType: 'image/png',
       );
 
-      await Share.shareXFiles([xFile]);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [xFile],
+        ),
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -513,7 +517,7 @@ class _DuesSummaryShareDialogState extends ConsumerState<DuesSummaryShareDialog>
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: dues.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final d = dues[index];
                         final isPaid = d.status == DueStatus.paid;
@@ -627,61 +631,6 @@ class _DuesSummaryShareDialogState extends ConsumerState<DuesSummaryShareDialog>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMetricMiniCard({
-    required String title,
-    required String value,
-    required Color color,
-    required Color bgColor,
-    required IconData icon,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: color),
-              const SizedBox(width: 6),
-              Text(
-                title,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color.withValues(alpha: 0.8)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegendItem(String label, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textSecondaryLight),
-        ),
-      ],
     );
   }
 }

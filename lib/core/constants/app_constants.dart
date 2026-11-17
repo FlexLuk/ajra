@@ -6,7 +6,14 @@ class AppConstants {
   static const String defaultLocale = 'fr_FR';
   static const String logoAsset = 'assets/images/logo.png';
   static const String appVersion = '1.4.8';
-  static const String apkDownloadUrl = 'https://ajra-app-8ae42.web.app/ajra.apk';
+  static const int appBuildNumber = 3;
+  static const String androidPackageId = 'com.ajra.ajra';
+  static const String apkDownloadUrl = 'https://ajra-app-8ae42.web.app/app.apk';
+  static const String apkFallbackDownloadUrl = 'https://ajra-app-8ae42.web.app/ajra.apk';
+  static const String apkMd5Url = 'https://ajra-app-8ae42.web.app/app.apk.md5';
+  static const String versionManifestUrl = 'https://ajra-app-8ae42.web.app/version.json';
+  static const String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.ajra.ajra';
+  static const String playStoreMarketUrl = 'market://details?id=com.ajra.ajra';
 
   // Firestore Collections
   static const String colUsers = 'users';

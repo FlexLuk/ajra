@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
@@ -103,7 +101,6 @@ class _MembershipFeeScreenState extends ConsumerState<MembershipFeeScreen> {
   Widget build(BuildContext context) {
     final configAsync = ref.watch(feeConfigProvider);
     final paymentAsync = ref.watch(userMembershipPaymentProvider);
-    final member = ref.watch(currentMemberProfileProvider).value;
 
     return Scaffold(
       appBar: AppBar(
@@ -160,8 +157,11 @@ class _MembershipFeeScreenState extends ConsumerState<MembershipFeeScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     const Text(
                                       'DROIT D\'ADHÉSION UNIQUE',
@@ -180,13 +180,17 @@ class _MembershipFeeScreenState extends ConsumerState<MembershipFeeScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 16),
-                                Text(
-                                  config.amount.toFormattedString(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: -0.5,
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    config.amount.toFormattedString(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: -0.5,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -323,14 +327,25 @@ class _MembershipFeeScreenState extends ConsumerState<MembershipFeeScreen> {
                                   ),
                                   const Divider(height: 28),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Text('Référence comptable :',
-                                          style: TextStyle(
-                                              fontSize: 12, color: AppColors.textSecondaryLight)),
-                                      Text(payment.transactionReference ?? 'N/A',
+                                      const Flexible(
+                                        flex: 2,
+                                        child: Text('Référence comptable :',
+                                            style: TextStyle(
+                                                fontSize: 12, color: AppColors.textSecondaryLight)),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        flex: 3,
+                                        child: Text(
+                                          payment.transactionReference ?? 'N/A',
+                                          textAlign: TextAlign.right,
+                                          softWrap: true,
                                           style: const TextStyle(
-                                              fontSize: 12, fontWeight: FontWeight.bold)),
+                                              fontSize: 12, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ],

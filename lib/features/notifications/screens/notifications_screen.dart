@@ -94,7 +94,7 @@ class NotificationsScreen extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: notifs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final n = notifs[index];
               final isRead = user != null ? n.isReadByUser(user.uid) : n.isRead;

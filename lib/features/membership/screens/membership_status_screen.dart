@@ -4,15 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/security/roles_and_permissions.dart';
+import '../../../core/services/app_update_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
 import '../../../shared/widgets/forms/ajra_payment_method_selector.dart';
 import '../../../shared/widgets/indicators/status_badge.dart';
-import '../../../shared/widgets/states/loading_state_view.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../membership_fees/models/membership_fee_config.dart';
-import '../../membership_fees/models/membership_payment.dart';
 import '../../membership_fees/screens/membership_fee_screen.dart';
 import '../models/member_profile.dart';
 import '../providers/membership_provider.dart';
@@ -29,6 +28,16 @@ class _MembershipStatusScreenState extends ConsumerState<MembershipStatusScreen>
   final _notesController = TextEditingController();
   String _paymentMode = 'Juice MCB';
   bool _isSubmittingPayment = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppUpdateService.checkOnAppStart(context);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -509,7 +518,68 @@ class _MembershipStatusScreenState extends ConsumerState<MembershipStatusScreen>
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+
+                  // CARD 3 : Mon Profil & Mot de passe de connexion
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryLight.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.lock_person_rounded, color: AppColors.primary, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  '3. Mon Profil & Mot de passe',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              StatusBadge(
+                                label: (user?.hasPassword == true ||
+                                        ref.read(authRepositoryProvider).isPasswordProviderLinked)
+                                    ? 'Mot de passe actif'
+                                    : 'Google uniquement',
+                                backgroundColor: (user?.hasPassword == true ||
+                                        ref.read(authRepositoryProvider).isPasswordProviderLinked)
+                                    ? AppColors.successLight
+                                    : AppColors.warningLight,
+                                textColor: (user?.hasPassword == true ||
+                                        ref.read(authRepositoryProvider).isPasswordProviderLinked)
+                                    ? AppColors.success
+                                    : const Color(0xFFB45309),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 22),
+                          const Text(
+                            'Vous pouvez créer ou modifier votre mot de passe personnel dans « Mon Profil » afin de vous connecter avec votre adresse e-mail et mot de passe en plus de Google.',
+                            style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight, height: 1.4),
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.password_rounded, size: 18),
+                              label: const Text('Gérer mon profil et mon mot de passe'),
+                              onPressed: () => context.go('/profile'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
 
                   // Statuts de l'AJRA & RPD Card
                   Container(
@@ -622,12 +692,27 @@ class _MembershipStatusScreenState extends ConsumerState<MembershipStatusScreen>
 
   Widget _buildInfoLine(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4.5),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight)),
-          Text(value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+          Flexible(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              softWrap: true,
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );

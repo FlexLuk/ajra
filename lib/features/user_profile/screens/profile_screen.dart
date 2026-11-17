@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/security/roles_and_permissions.dart';
+import '../../../core/services/app_update_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
 import '../../../shared/widgets/forms/ajra_date_field.dart';
@@ -330,6 +330,247 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  Future<void> _openPasswordModal(AppUser user, bool alreadyConfigured) async {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    bool obscureCurrent = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+    bool isSaving = false;
+    String? modalError;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.lock_person_rounded, color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  alreadyConfigured
+                      ? 'Modifier mon mot de passe'
+                      : 'Créer mon mot de passe',
+                  style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderLight),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Identifiant de connexion (Compte Google officiel) :',
+                          style: TextStyle(fontSize: 11.5, color: AppColors.textSecondaryLight),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.alternate_email_rounded, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                user.email,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  if (modalError != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.dangerLight,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: AppColors.danger, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              modalError!,
+                              style: const TextStyle(fontSize: 12, color: AppColors.danger),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (alreadyConfigured) ...[
+                    TextField(
+                      controller: currentPasswordController,
+                      obscureText: obscureCurrent,
+                      decoration: InputDecoration(
+                        labelText: 'Mot de passe actuel (facultatif si connecté avec Google)',
+                        prefixIcon: const Icon(Icons.key_outlined, size: 20),
+                        isDense: true,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscureCurrent ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            size: 19,
+                          ),
+                          onPressed: () => setModalState(() => obscureCurrent = !obscureCurrent),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  TextField(
+                    controller: newPasswordController,
+                    obscureText: obscureNew,
+                    decoration: InputDecoration(
+                      labelText: 'Nouveau mot de passe *',
+                      hintText: 'Au moins 6 caractères',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                      isDense: true,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureNew ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          size: 19,
+                        ),
+                        onPressed: () => setModalState(() => obscureNew = !obscureNew),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: confirmPasswordController,
+                    obscureText: obscureConfirm,
+                    decoration: InputDecoration(
+                      labelText: 'Confirmer le nouveau mot de passe *',
+                      hintText: 'Répétez le mot de passe',
+                      prefixIcon: const Icon(Icons.verified_user_outlined, size: 20),
+                      isDense: true,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          size: 19,
+                        ),
+                        onPressed: () => setModalState(() => obscureConfirm = !obscureConfirm),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Une fois enregistré, vous pourrez vous connecter sur l\'application AJRA soit avec Google, soit avec votre adresse e-mail et ce mot de passe.',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.textSecondaryLight, height: 1.35),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(ctx, false),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton.icon(
+              icon: isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.check_circle_outline, size: 18),
+              label: Text(alreadyConfigured ? 'Mettre à jour' : 'Créer le mot de passe'),
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      final newPass = newPasswordController.text;
+                      final confirmPass = confirmPasswordController.text;
+
+                      if (newPass.length < 6) {
+                        setModalState(() {
+                          modalError = 'Le mot de passe doit contenir au moins 6 caractères.';
+                        });
+                        return;
+                      }
+                      if (newPass != confirmPass) {
+                        setModalState(() {
+                          modalError = 'La confirmation ne correspond pas au nouveau mot de passe.';
+                        });
+                        return;
+                      }
+
+                      setModalState(() {
+                        isSaving = true;
+                        modalError = null;
+                      });
+
+                      try {
+                        await ref.read(authRepositoryProvider).createOrUpdatePassword(
+                              newPassword: newPass,
+                              currentPassword: currentPasswordController.text.isNotEmpty
+                                  ? currentPasswordController.text
+                                  : null,
+                            );
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx, true);
+                        }
+                      } catch (e) {
+                        setModalState(() {
+                          isSaving = false;
+                          modalError = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+                        });
+                      }
+                    },
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (saved == true && mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.success,
+          content: Text(
+            alreadyConfigured
+                ? 'Votre mot de passe de connexion a été modifié avec succès !'
+                : 'Votre mot de passe a été créé ! Vous pouvez désormais vous connecter avec votre e-mail et mot de passe.',
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _handleSignOut() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -500,6 +741,121 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(height: 20),
 
+              // Security & Password Card (Connexion par identifiant & mot de passe)
+              if (user != null) ...[
+                Builder(
+                  builder: (context) {
+                    final hasPasswordConfigured =
+                        user.hasPassword || ref.read(authRepositoryProvider).isPasswordProviderLinked;
+                    return Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.borderLight),
+                        boxShadow: AppColors.cardShadow,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryLight.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.lock_person_rounded,
+                                  color: AppColors.primary,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  'Sécurité & Mot de passe',
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              StatusBadge(
+                                label: hasPasswordConfigured
+                                    ? 'Mot de passe actif'
+                                    : 'Google uniquement',
+                                backgroundColor: hasPasswordConfigured
+                                    ? AppColors.successLight
+                                    : AppColors.warningLight,
+                                textColor: hasPasswordConfigured
+                                    ? AppColors.success
+                                    : const Color(0xFFB45309),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 20),
+                          _buildInfoRow('Identifiant (Login)', user.email),
+                          _buildInfoRow(
+                            'Modes de connexion',
+                            hasPasswordConfigured
+                                ? 'Google + Identifiant & Mot de passe'
+                                : 'Compte Google uniquement',
+                          ),
+                          if (user.passwordUpdatedAt != null)
+                            _buildInfoRow(
+                              'Dernière mise à jour',
+                              DateFormat('dd/MM/yyyy à HH:mm').format(user.passwordUpdatedAt!),
+                            ),
+                          const SizedBox(height: 8),
+                          Text(
+                            hasPasswordConfigured
+                                ? 'Votre mot de passe est configuré. Vous pouvez vous connecter sur l\'écran d\'accueil avec votre adresse e-mail (${user.email}) et votre mot de passe.'
+                                : 'Créez un mot de passe personnel pour pouvoir vous connecter avec votre identifiant (${user.email}) et mot de passe en plus de Google.',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondaryLight,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: hasPasswordConfigured
+                                    ? AppColors.secondary
+                                    : AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: Icon(
+                                hasPasswordConfigured
+                                    ? Icons.password_rounded
+                                    : Icons.add_moderator_outlined,
+                                size: 18,
+                              ),
+                              label: Text(
+                                hasPasswordConfigured
+                                    ? 'Modifier mon mot de passe'
+                                    : 'Créer mon mot de passe de connexion',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                              onPressed: () => _openPasswordModal(user, hasPasswordConfigured),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+
               // Membership Card
               if (member != null) ...[
                 Container(
@@ -644,7 +1000,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
               ),
-              // About & Statuts Card
+              const SizedBox(height: 20),
+
+              // About, Statuts & App Update Card
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -666,18 +1024,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       children: [
                         Icon(Icons.gavel_rounded, color: AppColors.primary, size: 22),
                         SizedBox(width: 8),
-                        Text(
-                          'Statuts de l\'AJRA & RPD',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            'Statuts de l\'AJRA, RPD & Mises à jour',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Consultez les 15 statuts officiels fondateurs de l\'association, le règlement intérieur et la protection des données.',
+                      'Consultez les 15 statuts officiels fondateurs de l\'association, le règlement intérieur et vérifiez la disponibilité d\'une mise à jour (MAJ).',
                       style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
                     ),
                     const SizedBox(height: 14),
@@ -696,21 +1056,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             onPressed: () => context.go('/about'),
                           ),
                         ),
-                        if (kIsWeb) ...[
-                          const SizedBox(width: 10),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF047857),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            icon: const Icon(Icons.download_rounded, size: 18),
-                            label: const Text('APK Android', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                            onPressed: () => context.go('/about'),
+                        const SizedBox(width: 10),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                        ],
+                          icon: const Icon(Icons.system_update_rounded, size: 18),
+                          label: const Text('Vérifier MAJ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          onPressed: () => AppUpdateService.checkAndPromptUpdate(context),
+                        ),
                       ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF047857),
+                          side: const BorderSide(color: Color(0xFF047857)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.android_rounded, size: 18),
+                        label: const Text(
+                          'Télécharger l\'APK Android (app.apk)',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                        ),
+                        onPressed: () => AppUpdateService.launchApkDownload(AppConstants.apkDownloadUrl),
+                      ),
                     ),
                   ],
                 ),
@@ -744,7 +1120,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             child: Image.asset(
                               AppConstants.logoAsset,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
+                              errorBuilder: (_, _, _) => const Icon(
                                 Icons.groups,
                                 color: AppColors.primary,
                                 size: 36,
@@ -795,12 +1171,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
-          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          Flexible(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              softWrap: true,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );

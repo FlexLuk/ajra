@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/services/app_update_service.dart';
 import '../../../core/theme/app_colors.dart';
 
 class AboutScreen extends StatefulWidget {
@@ -15,7 +16,7 @@ class AboutScreen extends StatefulWidget {
 class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  static const String apkDownloadUrl = 'https://ajra-app-8ae42.web.app/ajra.apk';
+  static const String apkDownloadUrl = AppConstants.apkDownloadUrl;
 
   @override
   void initState() {
@@ -37,14 +38,14 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Téléchargement direct : https://ajra-app-8ae42.web.app/ajra.apk')),
+            const SnackBar(content: Text('Téléchargement direct : https://ajra-app-8ae42.web.app/app.apk')),
           );
         }
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lien APK : https://ajra-app-8ae42.web.app/ajra.apk')),
+          const SnackBar(content: Text('Lien APK : https://ajra-app-8ae42.web.app/app.apk')),
         );
       }
     }
@@ -347,7 +348,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                   child: Image.asset(
                     AppConstants.logoAsset,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
+                    errorBuilder: (_, _, _) => const Icon(
                       Icons.groups,
                       color: AppColors.primary,
                       size: 40,
@@ -390,65 +391,101 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
         ),
         const SizedBox(height: 24),
 
-        if (kIsWeb) ...[
-          // Carte Téléchargement APK Android
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF047857).withValues(alpha: 0.3)),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF047857).withValues(alpha: 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.android, color: Color(0xFF047857), size: 26),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Application Android (APK Officiel)',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+        // Carte Mise à jour Automatique (MAJ) & Téléchargement APK Android
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF047857).withValues(alpha: 0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF047857).withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.system_update_rounded, color: Color(0xFF047857), size: 26),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Mises à jour & APK Officiel (Production)',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Téléchargez directement le fichier APK officiel version 1.4.8 pour installer l\'application sur votre smartphone Android.',
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
-                ),
-                const SizedBox(height: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'L\'application vérifie automatiquement à chaque ouverture la présence d\'une nouvelle version sur Google Play Store ou d\'un nouveau fichier APK officiel (comparaison d\'empreinte MD5 sur https://ajra-app-8ae42.web.app/app.apk).',
+                style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              if (!kIsWeb) ...[
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF047857),
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    icon: const Icon(Icons.download_rounded, size: 20),
+                    icon: const Icon(Icons.sync_rounded, size: 20),
                     label: const Text(
-                      'Télécharger l\'APK v1.4.8 (Release)',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      'Vérifier les mises à jour (MD5 & Play Store)',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                     ),
-                    onPressed: _downloadApk,
+                    onPressed: () => AppUpdateService.checkAndPromptUpdate(context),
                   ),
                 ),
+                const SizedBox(height: 10),
               ],
-            ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF047857),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.download_rounded, size: 20),
+                  label: const Text(
+                    'Télécharger l\'APK officiel (app.apk)',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                  ),
+                  onPressed: _downloadApk,
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.shop_two_outlined, size: 19),
+                  label: const Text(
+                    'Ouvrir sur Google Play Store',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  onPressed: () => AppUpdateService.launchPlayStore(AppConstants.playStoreUrl),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-        ],
+        ),
+        const SizedBox(height: 20),
 
         // Fonctionnalités clés
         const Text(

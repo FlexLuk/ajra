@@ -24,17 +24,34 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "**/*.apk"
     ],
     "headers": [
       {
-        "source": "**/*.@(html|js|json)",
+        "source": "**/*.@(html|js|json|apk|md5)",
         "headers": [
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate"
+          },
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
           }
         ]
+      }
+    ],
+    "redirects": [
+      {
+        "source": "/app.apk",
+        "destination": "https://github.com/FlexLuk/ajra/raw/main/web/app.apk",
+        "type": 302
+      },
+      {
+        "source": "/ajra.apk",
+        "destination": "https://github.com/FlexLuk/ajra/raw/main/web/app.apk",
+        "type": 302
       }
     ],
     "rewrites": [

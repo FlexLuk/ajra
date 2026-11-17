@@ -8,7 +8,6 @@ import '../../../core/utils/money.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
 import '../../../shared/widgets/cards/metric_card.dart';
-import '../../../shared/widgets/indicators/status_badge.dart';
 import '../../accounting/models/financial_transaction.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dues/models/monthly_due.dart';
@@ -27,32 +26,100 @@ class DashboardScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final memberProfile = ref.watch(currentMemberProfileProvider).value;
     final role = user?.role ?? UserRole.member;
+    final hasPasswordConfigured =
+        user != null && (user.hasPassword || ref.read(authRepositoryProvider).isPasswordProviderLinked);
 
     return AppScaffold(
       selectedIndex: 0,
       child: Scaffold(
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Welcome Banner
-                _buildWelcomeBanner(context, user, memberProfile),
-                const SizedBox(height: 20),
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(allMembersProvider);
+              ref.invalidate(recentTransactionsProvider);
+              ref.invalidate(allDuesProvider);
+              ref.invalidate(userDuesProvider);
+              ref.invalidate(eventsStreamProvider);
+              ref.invalidate(postsStreamProvider);
+              await ref.read(authRepositoryProvider).reloadUser();
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Welcome Banner
+                  _buildWelcomeBanner(context, user, memberProfile),
+                  const SizedBox(height: 16),
 
-                // If role is ADMIN
-                if (role.isAdmin) ...[
-                  _buildAdminDashboard(context, ref),
-                ] else if (role.isBureau) ...[
-                  _buildBureauDashboard(context, ref, user!),
-                ] else ...[
-                  _buildMemberDashboard(context, ref, memberProfile),
+                  // Prompt to configure password if not yet set
+                  if (user != null && !hasPasswordConfigured) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.35)),
+                        boxShadow: AppColors.cardShadow,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.lock_person_rounded, color: AppColors.primary, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Connexion par identifiant & mot de passe',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Créez votre mot de passe dans Mon Profil pour vous connecter aussi avec ${user.email}.',
+                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: () => context.go('/profile'),
+                            child: const Text('Créer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // If role is ADMIN
+                  if (role.isAdmin) ...[
+                    _buildAdminDashboard(context, ref),
+                  ] else if (role.isBureau) ...[
+                    _buildBureauDashboard(context, ref, user!),
+                  ] else ...[
+                    _buildMemberDashboard(context, ref, memberProfile),
+                  ],
+
+                  const SizedBox(height: 24),
+                  _buildRecentPostsSection(context, ref),
                 ],
-
-                const SizedBox(height: 24),
-                _buildRecentPostsSection(context, ref),
-              ],
+              ),
             ),
           ),
         ),
@@ -159,7 +226,7 @@ class DashboardScreen extends ConsumerWidget {
               child: Image.asset(
                 AppConstants.logoAsset,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
+                errorBuilder: (_, _, _) => const Icon(
                   Icons.groups,
                   color: AppColors.primary,
                   size: 28,
@@ -175,8 +242,6 @@ class DashboardScreen extends ConsumerWidget {
   Widget _buildAdminDashboard(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(allMembersProvider);
     final txsAsync = ref.watch(recentTransactionsProvider);
-    final duesAsync = ref.watch(allDuesProvider);
-    final eventsAsync = ref.watch(eventsStreamProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,7 +285,7 @@ class DashboardScreen extends ConsumerWidget {
             );
           },
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
         ),
         const SizedBox(height: 12),
 
@@ -263,7 +328,7 @@ class DashboardScreen extends ConsumerWidget {
             );
           },
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
         ),
         const SizedBox(height: 24),
 
@@ -306,6 +371,18 @@ class DashboardScreen extends ConsumerWidget {
               label: 'Emprunts des Membres',
               icon: Icons.handshake_outlined,
               route: '/loans',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Mon Profil & Mot de passe',
+              icon: Icons.lock_person_outlined,
+              route: '/profile',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Statuts & Mises à jour',
+              icon: Icons.gavel_rounded,
+              route: '/about',
             ),
           ],
         ),
@@ -378,6 +455,18 @@ class DashboardScreen extends ConsumerWidget {
               label: 'Emprunts des Membres',
               icon: Icons.handshake_outlined,
               route: '/loans',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Mon Profil & Mot de passe',
+              icon: Icons.lock_person_outlined,
+              route: '/profile',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Statuts & Mises à jour',
+              icon: Icons.gavel_rounded,
+              route: '/about',
             ),
           ],
         ),
@@ -526,7 +615,7 @@ class DashboardScreen extends ConsumerWidget {
             );
           },
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
         ),
 
         const SizedBox(height: 24),
@@ -569,6 +658,18 @@ class DashboardScreen extends ConsumerWidget {
               label: 'Emprunts des Membres',
               icon: Icons.handshake_outlined,
               route: '/loans',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Mon Profil & Mot de passe',
+              icon: Icons.lock_person_outlined,
+              route: '/profile',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Statuts & Mises à jour',
+              icon: Icons.gavel_rounded,
+              route: '/about',
             ),
           ],
         ),
@@ -707,7 +808,7 @@ class DashboardScreen extends ConsumerWidget {
             );
           },
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
         ),
       ],
     );

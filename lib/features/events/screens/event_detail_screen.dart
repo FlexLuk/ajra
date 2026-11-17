@@ -5,10 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
-import '../../../shared/widgets/buttons/ajra_button.dart';
 import '../../../shared/widgets/cards/metric_card.dart';
 import '../../../shared/widgets/forms/ajra_currency_field.dart';
 import '../../../shared/widgets/forms/ajra_text_field.dart';
@@ -150,9 +148,15 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedCategory,
+                  initialValue: selectedCategory,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Catégorie'),
-                  items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  items: categories
+                      .map((c) => DropdownMenuItem(
+                            value: c,
+                            child: Text(c, overflow: TextOverflow.ellipsis),
+                          ))
+                      .toList(),
                   onChanged: (v) {
                     if (v != null) {
                       setModalState(() {
@@ -166,13 +170,17 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedMode,
+                  initialValue: selectedMode,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Moyen de paiement'),
                   items: const [
-                    DropdownMenuItem(value: 'Espèces', child: Text('Espèces (Cash)')),
-                    DropdownMenuItem(value: 'Juice MCB', child: Text('Juice MCB')),
-                    DropdownMenuItem(value: 'Virement bancaire', child: Text('Virement bancaire')),
-                    DropdownMenuItem(value: 'Autre', child: Text('Autre')),
+                    DropdownMenuItem(value: 'Espèces', child: Text('Espèces (Cash)', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'Juice MCB', child: Text('Juice MCB', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(
+                      value: 'Virement bancaire',
+                      child: Text('Virement bancaire', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(value: 'Autre', child: Text('Autre', overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (v) {
                     if (v != null) setModalState(() => selectedMode = v);
@@ -233,7 +241,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                         if (debitAssociationCaisse) ...[
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
-                            value: selectedAccountId,
+                            initialValue: selectedAccountId,
+                            isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Compte de l\'association à débiter',
                               isDense: true,
@@ -241,15 +250,15 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                             items: const [
                               DropdownMenuItem(
                                 value: AppConstants.accountCash,
-                                child: Text('Caisse Espèces AJRA (Cash)'),
+                                child: Text('Caisse Espèces AJRA (Cash)', overflow: TextOverflow.ellipsis),
                               ),
                               DropdownMenuItem(
                                 value: AppConstants.accountBank,
-                                child: Text('Compte Bancaire Principal AJRA'),
+                                child: Text('Compte Bancaire Principal AJRA', overflow: TextOverflow.ellipsis),
                               ),
                               DropdownMenuItem(
                                 value: AppConstants.accountJuice,
-                                child: Text('Juice (MCB) AJRA'),
+                                child: Text('Juice (MCB) AJRA', overflow: TextOverflow.ellipsis),
                               ),
                             ],
                             onChanged: (v) {
@@ -465,7 +474,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -478,7 +489,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                         style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -538,9 +548,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                       children: [
                         const Icon(Icons.confirmation_number_outlined, size: 16, color: Colors.black87),
                         const SizedBox(width: 6),
-                        Text(
-                          'Participation (PAF) : ${widget.event.participationFee!.toFormattedString()} / personne',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                        Flexible(
+                          child: Text(
+                            'Participation (PAF) : ${widget.event.participationFee!.toFormattedString()} / personne',
+                            softWrap: true,
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                          ),
                         ),
                       ],
                     ),
@@ -697,36 +710,43 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          isProfit ? Icons.savings_outlined : Icons.warning_amber_rounded,
-                          color: isProfit ? AppColors.success : AppColors.danger,
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isProfit ? 'Bénéfice Net (Excédent)' : 'Déficit Net',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: isProfit ? AppColors.success : AppColors.danger,
-                              ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            isProfit ? Icons.savings_outlined : Icons.warning_amber_rounded,
+                            color: isProfit ? AppColors.success : AppColors.danger,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isProfit ? 'Bénéfice Net (Excédent)' : 'Déficit Net',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: isProfit ? AppColors.success : AppColors.danger,
+                                  ),
+                                ),
+                                Text(
+                                  isProfit
+                                      ? 'Excédent pour la caisse de l\'AJRA'
+                                      : 'Dépenses supérieures aux recettes',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+                                ),
+                              ],
                             ),
-                            Text(
-                              isProfit ? 'Excédent pour la caisse de l\'AJRA' : 'Dépenses supérieures aux recettes',
-                              style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       netBalance.toFormattedString(),
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                         color: isProfit ? AppColors.success : AppColors.danger,
                       ),
@@ -788,7 +808,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: txs.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final tx = txs[index];
                     final isInc = tx.type == EventTransactionType.income;
@@ -890,7 +910,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: participants.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             final part = participants[index];
             return Container(

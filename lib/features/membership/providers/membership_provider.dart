@@ -17,6 +17,7 @@ final currentMemberProfileProvider = StreamProvider<MemberProfile?>((ref) {
 class MemberSearchQueryNotifier extends Notifier<String> {
   @override
   String build() => '';
+  @override
   set state(String value) => super.state = value;
 }
 final memberSearchQueryProvider =
@@ -25,6 +26,7 @@ final memberSearchQueryProvider =
 class MemberStatusFilterNotifier extends Notifier<MembershipStatus?> {
   @override
   MembershipStatus? build() => null;
+  @override
   set state(MembershipStatus? value) => super.state = value;
 }
 final memberStatusFilterProvider =
@@ -33,6 +35,7 @@ final memberStatusFilterProvider =
 class MemberPermitFilterNotifier extends Notifier<PermitType?> {
   @override
   PermitType? build() => null;
+  @override
   set state(PermitType? value) => super.state = value;
 }
 final memberPermitFilterProvider =

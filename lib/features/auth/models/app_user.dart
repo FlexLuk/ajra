@@ -8,6 +8,8 @@ class AppUser {
   final UserRole role;
   final List<String> permissions;
   final bool isSuspended;
+  final bool hasPassword;
+  final DateTime? passwordUpdatedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? lastLoginAt;
@@ -20,6 +22,8 @@ class AppUser {
     this.role = UserRole.member,
     this.permissions = const [],
     this.isSuspended = false,
+    this.hasPassword = false,
+    this.passwordUpdatedAt,
     required this.createdAt,
     required this.updatedAt,
     this.lastLoginAt,
@@ -64,6 +68,10 @@ class AppUser {
               .toList() ??
           const [],
       isSuspended: (json['isSuspended'] as bool?) ?? false,
+      hasPassword: (json['hasPassword'] as bool?) ?? false,
+      passwordUpdatedAt: json['passwordUpdatedAt'] != null
+          ? DateTime.tryParse(json['passwordUpdatedAt'].toString())
+          : null,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -85,6 +93,9 @@ class AppUser {
       'role': role.code,
       'permissions': permissions,
       'isSuspended': isSuspended,
+      'hasPassword': hasPassword,
+      if (passwordUpdatedAt != null)
+        'passwordUpdatedAt': passwordUpdatedAt!.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'lastLoginAt': lastLoginAt?.toIso8601String(),
@@ -98,6 +109,8 @@ class AppUser {
     UserRole? role,
     List<String>? permissions,
     bool? isSuspended,
+    bool? hasPassword,
+    DateTime? passwordUpdatedAt,
     DateTime? updatedAt,
     DateTime? lastLoginAt,
   }) {
@@ -109,6 +122,8 @@ class AppUser {
       role: role ?? this.role,
       permissions: permissions ?? this.permissions,
       isSuspended: isSuspended ?? this.isSuspended,
+      hasPassword: hasPassword ?? this.hasPassword,
+      passwordUpdatedAt: passwordUpdatedAt ?? this.passwordUpdatedAt,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,

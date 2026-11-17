@@ -3,8 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/money.dart';
-import '../../accounting/models/financial_transaction.dart';
-import '../../audit/models/audit_log_entry.dart';
 import '../../fundraising/models/fundraising_campaign.dart';
 import '../models/event_item.dart';
 import '../models/event_transaction.dart';

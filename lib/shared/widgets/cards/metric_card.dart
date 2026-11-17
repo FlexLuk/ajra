@@ -23,80 +23,89 @@ class MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgIconColor = iconBackgroundColor ?? iconColor.withValues(alpha: 0.12);
+    final bgIconColor = iconBackgroundColor ?? iconColor.withValues(alpha: 0.1);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.borderLight.withValues(alpha: 0.8),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: AppColors.borderLight.withValues(alpha: 0.85),
+            ),
+            boxShadow: AppColors.cardShadow,
           ),
-          boxShadow: AppColors.cardShadow,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondaryLight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      softWrap: true,
+                      maxLines: 2,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
+                        color: Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondaryLight,
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: bgIconColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, size: 18, color: iconColor),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    color: AppColors.textPrimaryLight,
                   ),
                 ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: bgIconColor,
-                    borderRadius: BorderRadius.circular(12),
+                    color: iconColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Icon(icon, size: 20, color: iconColor),
+                  child: Text(
+                    subtitle!,
+                    softWrap: true,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: iconColor,
+                    ),
+                  ),
                 ),
               ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.6,
-                color: AppColors.textPrimaryLight,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  subtitle!,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: iconColor,
-                  ),
-                ),
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );

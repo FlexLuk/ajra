@@ -54,11 +54,16 @@ class ConversationsScreen extends ConsumerWidget {
 
             return AlertDialog(
               title: const Text('Nouveau message privé'),
-              content: SizedBox(
-                width: 400,
-                height: 400,
-                child: Column(
-                  children: [
+              content: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 400,
+                  maxHeight: MediaQuery.of(context).size.height * 0.55,
+                ),
+                child: SizedBox(
+                  width: double.maxFinite,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     TextField(
                       decoration: const InputDecoration(
                         hintText: 'Rechercher un membre...',
@@ -71,7 +76,7 @@ class ConversationsScreen extends ConsumerWidget {
                     Expanded(
                       child: ListView.separated(
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        separatorBuilder: (_, _) => const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final m = filtered[index];
                           return ListTile(
@@ -100,6 +105,7 @@ class ConversationsScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
               ),
               actions: [
                 TextButton(
@@ -170,15 +176,20 @@ class ConversationsScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.groups_rounded, color: Color(0xFF10B981)),
                   SizedBox(width: 8),
-                  Text('Créer un groupe AJRA'),
+                  Expanded(child: Text('Créer un groupe AJRA')),
                 ],
               ),
-              content: SizedBox(
-                width: 440,
-                height: 480,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              content: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 440,
+                  maxHeight: MediaQuery.of(context).size.height * 0.58,
+                ),
+                child: SizedBox(
+                  width: double.maxFinite,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     TextField(
                       controller: groupNameController,
                       decoration: const InputDecoration(
@@ -249,6 +260,7 @@ class ConversationsScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
               ),
               actions: [
                 TextButton(
@@ -403,7 +415,7 @@ class ConversationsScreen extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             itemCount: convs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final c = convs[index];
               final currentUid = user?.uid ?? '';

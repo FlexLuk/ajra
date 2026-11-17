@@ -43,7 +43,7 @@ class AjraButton extends StatelessWidget {
       case AjraButtonVariant.outline:
         bgColor = Colors.transparent;
         fgColor = AppColors.primary;
-        borderSide = const BorderSide(color: AppColors.primary, width: 1.5);
+        borderSide = const BorderSide(color: AppColors.primary, width: 1.4);
         break;
       case AjraButtonVariant.danger:
         bgColor = AppColors.danger;
@@ -59,53 +59,61 @@ class AjraButton extends StatelessWidget {
 
     final effectiveOnPressed = isLoading ? null : onPressed;
 
-    return SizedBox(
-      width: width,
-      height: height,
-      child: ElevatedButton(
-        onPressed: effectiveOnPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: bgColor,
-          foregroundColor: fgColor,
-          elevation: 0,
-          side: borderSide,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: height,
+        minWidth: width ?? 0,
+      ),
+      child: SizedBox(
+        width: width,
+        child: ElevatedButton(
+          onPressed: effectiveOnPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: bgColor,
+            foregroundColor: fgColor,
+            elevation: 0,
+            side: borderSide,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-        ),
-        child: isLoading
-            ? SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(fgColor),
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 18, color: fgColor),
-                    const SizedBox(width: 8),
-                  ],
-                  Flexible(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
-                        color: fgColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+          child: isLoading
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(fgColor),
                   ),
-                ],
-              ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: 18, color: fgColor),
+                      const SizedBox(width: 8),
+                    ],
+                    Flexible(
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        maxLines: 2,
+                        overflow: TextOverflow.visible,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.1,
+                          height: 1.25,
+                          color: fgColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }

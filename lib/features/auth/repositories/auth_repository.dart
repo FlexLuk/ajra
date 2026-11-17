@@ -12,7 +12,17 @@ import '../models/app_user.dart';
 abstract class BaseAuthRepository {
   Stream<AppUser?> get userStream;
   AppUser? get currentUser;
+  bool get isPasswordProviderLinked;
   Future<AppUser?> signInWithGoogle();
+  Future<AppUser?> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  });
+  Future<void> createOrUpdatePassword({
+    required String newPassword,
+    String? currentPassword,
+  });
+  Future<void> sendPasswordResetEmail(String email);
   Future<AppUser?> signInAsDemoUser({UserRole role = UserRole.admin});
   Future<void> signOut();
   Future<void> reloadUser();
@@ -74,6 +84,10 @@ class FirebaseAuthRepository implements BaseAuthRepository {
       if (docSnapshot.exists && docSnapshot.data() != null) {
         final data = Map<String, dynamic>.from(docSnapshot.data()!);
         final isSuperAdmin = firebaseUser.email?.toLowerCase().trim() == 'heriniaina.luk@gmail.com';
+        final hasPasswordInAuth = firebaseUser.providerData.any((p) => p.providerId == 'password');
+        if (hasPasswordInAuth && data['hasPassword'] != true) {
+          data['hasPassword'] = true;
+        }
         if (isSuperAdmin && data['role'] != UserRole.admin.code) {
           data['role'] = UserRole.admin.code;
           _firestore.collection(AppConstants.colUsers).doc(uid).update({
@@ -84,7 +98,15 @@ class FirebaseAuthRepository implements BaseAuthRepository {
         _currentUser = AppUser.fromJson(data, uid);
         _userController.add(_currentUser);
       } else {
-        // Le document n'existe pas encore: première connexion
+        // RÈGLE STRICTE : Seule la création de compte via Google est acceptée sur le serveur
+        final hasGoogleProvider = firebaseUser.providerData.any((p) => p.providerId == 'google.com');
+        if (!hasGoogleProvider) {
+          _currentUser = null;
+          _userController.add(null);
+          return;
+        }
+
+        // Le document n'existe pas encore: première connexion Google
         final isSuperAdmin = firebaseUser.email?.toLowerCase().trim() == 'heriniaina.luk@gmail.com';
         final newUser = AppUser(
           uid: uid,
@@ -94,6 +116,7 @@ class FirebaseAuthRepository implements BaseAuthRepository {
           role: isSuperAdmin ? UserRole.admin : UserRole.member,
           permissions: const [],
           isSuspended: false,
+          hasPassword: firebaseUser.providerData.any((p) => p.providerId == 'password'),
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
@@ -122,6 +145,18 @@ class FirebaseAuthRepository implements BaseAuthRepository {
 
   @override
   AppUser? get currentUser => _currentUser;
+
+  @override
+  bool get isPasswordProviderLinked {
+    if (_currentUser?.hasPassword == true) return true;
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+      return user.providerData.any((p) => p.providerId == 'password');
+    } catch (_) {
+      return false;
+    }
+  }
 
   @override
   Future<AppUser?> signInWithGoogle() async {
@@ -187,6 +222,223 @@ class FirebaseAuthRepository implements BaseAuthRepository {
     } catch (e) {
       rethrow;
     }
+  }
+
+  @override
+  Future<AppUser?> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty || password.isEmpty) {
+      throw Exception('Veuillez renseigner votre identifiant (e-mail) et votre mot de passe.');
+    }
+
+    try {
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: normalizedEmail,
+        password: password,
+      );
+
+      final firebaseUser = userCredential.user;
+      if (firebaseUser == null) return null;
+
+      final docRef = _firestore.collection(AppConstants.colUsers).doc(firebaseUser.uid);
+      final doc = await docRef.get();
+
+      // RÈGLE MÉTIER STRICTE : Aucune création de compte par login/mot de passe.
+      // Seuls les comptes déjà créés sur le serveur via Google sont acceptés.
+      if (!doc.exists || doc.data() == null) {
+        await signOut();
+        throw Exception(
+          'Ce compte n\'existe pas sur le serveur AJRA. Seule la connexion initiale avec Google est acceptée pour créer un profil.',
+        );
+      }
+
+      final data = Map<String, dynamic>.from(doc.data()!);
+      if (data['isSuspended'] == true) {
+        await signOut();
+        throw Exception('Votre compte a été suspendu. Veuillez contacter le bureau de l\'AJRA.');
+      }
+
+      final isSuperAdmin = firebaseUser.email?.toLowerCase().trim() == 'heriniaina.luk@gmail.com';
+      final currentRole = UserRole.fromCode(data['role'] as String?);
+      final shouldPromote = isSuperAdmin && currentRole != UserRole.admin;
+
+      await docRef.update({
+        'lastLoginAt': DateTime.now().toIso8601String(),
+        'hasPassword': true,
+        if (shouldPromote) 'role': UserRole.admin.code,
+      });
+
+      data['hasPassword'] = true;
+      data['lastLoginAt'] = DateTime.now().toIso8601String();
+      if (shouldPromote) data['role'] = UserRole.admin.code;
+
+      _currentUser = AppUser.fromJson(data, firebaseUser.uid);
+      _userController.add(_currentUser);
+      return _currentUser;
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          throw Exception(
+            'Aucun compte trouvé pour cet identifiant. Connectez-vous d\'abord avec Google puis créez votre mot de passe dans Mon Profil.',
+          );
+        case 'wrong-password':
+        case 'invalid-credential':
+          throw Exception(
+            'Identifiant ou mot de passe incorrect. Si vous n\'avez pas encore défini de mot de passe, connectez-vous avec Google puis créez-le dans Mon Profil.',
+          );
+        case 'invalid-email':
+          throw Exception('Le format de l\'adresse e-mail (identifiant) est invalide.');
+        case 'user-disabled':
+          throw Exception('Ce compte utilisateur a été désactivé.');
+        case 'too-many-requests':
+          throw Exception(
+            'Trop de tentatives infructueuses. Veuillez patienter quelques minutes ou vous connecter avec Google.',
+          );
+        default:
+          throw Exception('Erreur d\'authentification (${e.code}) : ${e.message ?? "Accès refusé"}');
+      }
+    }
+  }
+
+  Future<void> _reauthenticateWithGoogle(User user) async {
+    if (kIsWeb) {
+      final googleProvider = GoogleAuthProvider();
+      googleProvider.addScope('email');
+      googleProvider.addScope('profile');
+      await user.reauthenticateWithPopup(googleProvider);
+    } else {
+      final GoogleSignInAccount? googleUser =
+          await _googleSignIn.signInSilently() ?? await _googleSignIn.signIn();
+      if (googleUser == null) {
+        throw Exception('Ré-authentification Google annulée.');
+      }
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await user.reauthenticateWithCredential(credential);
+    }
+  }
+
+  @override
+  Future<void> createOrUpdatePassword({
+    required String newPassword,
+    String? currentPassword,
+  }) async {
+    if (newPassword.length < 6) {
+      throw Exception('Le mot de passe doit contenir au moins 6 caractères.');
+    }
+
+    // Support du mode démo / test
+    if (_currentUser?.uid == 'dev_demo_user' && _auth.currentUser == null) {
+      _currentUser = _currentUser!.copyWith(
+        hasPassword: true,
+        passwordUpdatedAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      _userController.add(_currentUser);
+      return;
+    }
+
+    final user = _auth.currentUser;
+    if (user == null || user.email == null || user.email!.isEmpty) {
+      throw Exception('Session utilisateur introuvable. Veuillez vous reconnecter avec Google.');
+    }
+
+    final email = user.email!.trim();
+    final alreadyLinked = user.providerData.any((p) => p.providerId == 'password');
+
+    Future<void> applyPasswordChange() async {
+      if (currentPassword != null && currentPassword.isNotEmpty && alreadyLinked) {
+        final cred = EmailAuthProvider.credential(email: email, password: currentPassword);
+        await user.reauthenticateWithCredential(cred);
+      }
+
+      if (!alreadyLinked) {
+        try {
+          final cred = EmailAuthProvider.credential(email: email, password: newPassword);
+          await user.linkWithCredential(cred);
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'provider-already-linked' ||
+              e.code == 'credential-already-in-use' ||
+              e.code == 'email-already-in-use') {
+            await user.updatePassword(newPassword);
+          } else {
+            rethrow;
+          }
+        }
+      } else {
+        await user.updatePassword(newPassword);
+      }
+    }
+
+    try {
+      await applyPasswordChange();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        try {
+          await _reauthenticateWithGoogle(user);
+          await applyPasswordChange();
+        } catch (_) {
+          // Fallback via Cloud Function serveur si la popup Google est bloquée
+          try {
+            final callable = FirebaseFunctions.instance.httpsCallable('setUserPassword');
+            await callable.call({'newPassword': newPassword});
+          } catch (fnErr) {
+            throw Exception(
+              'Pour votre sécurité, veuillez vous déconnecter puis vous reconnecter avec Google avant de définir votre mot de passe.',
+            );
+          }
+        }
+      } else if (e.code == 'weak-password') {
+        throw Exception('Le mot de passe choisi est trop faible (minimum 6 caractères).');
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        throw Exception('Le mot de passe actuel saisi est incorrect.');
+      } else {
+        // Fallback serveur si la méthode client échoue
+        try {
+          final callable = FirebaseFunctions.instance.httpsCallable('setUserPassword');
+          await callable.call({'newPassword': newPassword});
+        } catch (_) {
+          throw Exception('Impossible d\'enregistrer le mot de passe : ${e.message ?? e.code}');
+        }
+      }
+    }
+
+    final now = DateTime.now();
+    await _firestore.collection(AppConstants.colUsers).doc(user.uid).update({
+      'hasPassword': true,
+      'passwordUpdatedAt': now.toIso8601String(),
+      'updatedAt': now.toIso8601String(),
+    });
+
+    try {
+      await _firestore.collection(AppConstants.colAuditLogs).add({
+        'userId': user.uid,
+        'userName': _currentUser?.displayName ?? email,
+        'userRole': _currentUser?.role.code ?? 'MEMBRE',
+        'action': alreadyLinked ? 'user.password_updated' : 'user.password_created',
+        'entityType': 'user',
+        'entityId': user.uid,
+        'details': {'email': email},
+        'timestamp': now.toIso8601String(),
+      });
+    } catch (_) {}
+
+    await reloadUser();
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    final normalized = email.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      throw Exception('Veuillez saisir votre adresse e-mail.');
+    }
+    await _auth.sendPasswordResetEmail(email: normalized);
   }
 
   @override

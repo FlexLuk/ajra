@@ -55,6 +55,57 @@ exports.setUserRole = functions.https.onCall(async (data, context) => {
 });
 
 /**
+ * Permet à un utilisateur déjà créé sur le serveur via Google de définir ou modifier son mot de passe.
+ * Aucune inscription directe n'est autorisée : le document users/{uid} doit déjà exister.
+ */
+exports.setUserPassword = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentification requise.');
+  }
+
+  const callerUid = context.auth.uid;
+  const newPassword = data && typeof data.newPassword === 'string' ? data.newPassword : '';
+  if (newPassword.length < 6) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Le mot de passe doit comporter au moins 6 caractères.'
+    );
+  }
+
+  const callerUserDoc = await db.collection('users').doc(callerUid).get();
+  if (!callerUserDoc.exists) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Seuls les comptes créés initialement via Google sur le serveur AJRA sont autorisés.'
+    );
+  }
+
+  await auth.updateUser(callerUid, {
+    password: newPassword,
+  });
+
+  const now = new Date().toISOString();
+  await db.collection('users').doc(callerUid).update({
+    hasPassword: true,
+    passwordUpdatedAt: now,
+    updatedAt: now,
+  });
+
+  await db.collection('auditLogs').add({
+    userId: callerUid,
+    userName: callerUserDoc.data().displayName || callerUserDoc.data().email || 'Membre',
+    userRole: callerUserDoc.data().role || 'MEMBRE',
+    action: 'user.password_set_via_server',
+    entityType: 'user',
+    entityId: callerUid,
+    details: { email: callerUserDoc.data().email || '' },
+    timestamp: now,
+  });
+
+  return { success: true };
+});
+
+/**
  * Déclencheur: notification lors de la validation ou du rejet d'une adhésion
  */
 exports.onMembershipReviewed = functions.firestore

@@ -4,11 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/app_scaffold.dart';
-import '../../../shared/widgets/buttons/ajra_button.dart';
 import '../../../shared/widgets/forms/ajra_currency_field.dart';
 import '../../../shared/widgets/forms/ajra_payment_method_selector.dart';
 import '../../../shared/widgets/forms/ajra_text_field.dart';
@@ -82,13 +80,17 @@ class _DuesListScreenState extends ConsumerState<DuesListScreen> with SingleTick
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<int>(
-                      value: selectedMonth,
+                      initialValue: selectedMonth,
+                      isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Mois'),
                       items: List.generate(12, (i) => i + 1).map((m) {
                         final label = DateFormat('MMMM', 'fr_FR').format(DateTime(2026, m));
                         return DropdownMenuItem(
                           value: m,
-                          child: Text(label[0].toUpperCase() + label.substring(1)),
+                          child: Text(
+                            label[0].toUpperCase() + label.substring(1),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }).toList(),
                       onChanged: (v) {
@@ -99,7 +101,8 @@ class _DuesListScreenState extends ConsumerState<DuesListScreen> with SingleTick
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<int>(
-                      value: selectedYear,
+                      initialValue: selectedYear,
+                      isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Année'),
                       items: [2025, 2026, 2027].map((y) {
                         return DropdownMenuItem(value: y, child: Text(y.toString()));
@@ -272,15 +275,25 @@ class _DuesListScreenState extends ConsumerState<DuesListScreen> with SingleTick
                   if (directValidateAndDisburse) ...[
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: selectedAccountId,
+                      initialValue: selectedAccountId,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Compte AJRA crédité *',
                         isDense: true,
                       ),
                       items: const [
-                        DropdownMenuItem(value: AppConstants.accountBank, child: Text('Compte Bancaire Principal AJRA')),
-                        DropdownMenuItem(value: AppConstants.accountJuice, child: Text('Compte Juice AJRA (MCB)')),
-                        DropdownMenuItem(value: AppConstants.accountCash, child: Text('Caisse Espèces AJRA (Cash)')),
+                        DropdownMenuItem(
+                          value: AppConstants.accountBank,
+                          child: Text('Compte Bancaire Principal AJRA', overflow: TextOverflow.ellipsis),
+                        ),
+                        DropdownMenuItem(
+                          value: AppConstants.accountJuice,
+                          child: Text('Compte Juice AJRA (MCB)', overflow: TextOverflow.ellipsis),
+                        ),
+                        DropdownMenuItem(
+                          value: AppConstants.accountCash,
+                          child: Text('Caisse Espèces AJRA (Cash)', overflow: TextOverflow.ellipsis),
+                        ),
                       ],
                       onChanged: (val) {
                         if (val != null) setModalState(() => selectedAccountId = val);
@@ -446,15 +459,25 @@ class _DuesListScreenState extends ConsumerState<DuesListScreen> with SingleTick
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedAccountId,
+                  initialValue: selectedAccountId,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Compte de trésorerie AJRA crédité *',
                     isDense: true,
                   ),
                   items: const [
-                    DropdownMenuItem(value: AppConstants.accountJuice, child: Text('Compte Juice AJRA (MCB)')),
-                    DropdownMenuItem(value: AppConstants.accountBank, child: Text('Compte Bancaire Principal AJRA')),
-                    DropdownMenuItem(value: AppConstants.accountCash, child: Text('Caisse Espèces AJRA (Cash)')),
+                    DropdownMenuItem(
+                      value: AppConstants.accountJuice,
+                      child: Text('Compte Juice AJRA (MCB)', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: AppConstants.accountBank,
+                      child: Text('Compte Bancaire Principal AJRA', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: AppConstants.accountCash,
+                      child: Text('Caisse Espèces AJRA (Cash)', overflow: TextOverflow.ellipsis),
+                    ),
                   ],
                   onChanged: (val) {
                     if (val != null) setModalState(() => selectedAccountId = val);
@@ -1015,7 +1038,7 @@ class _DuesListScreenState extends ConsumerState<DuesListScreen> with SingleTick
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: dues.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final due = dues[index];
             return _buildDueCard(due, isForVerification: false, currentUser: user);
@@ -1057,7 +1080,7 @@ class _DuesListScreenState extends ConsumerState<DuesListScreen> with SingleTick
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: dues.length + 1,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             if (index == 0) {
               return _buildShareBanner(dues);
@@ -1113,19 +1136,24 @@ class _DuesListScreenState extends ConsumerState<DuesListScreen> with SingleTick
             ],
           ),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 'Montant : ${due.amount.toFormattedString()}',
                 style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
               ),
-              if (due.amountPaid.isPositive) ...[
-                const SizedBox(width: 8),
+              if (due.amountPaid.isPositive)
                 Text(
                   '(Réglé : ${due.amountPaid.toFormattedString()})',
-                  style: const TextStyle(fontSize: 13, color: AppColors.success, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ],
             ],
           ),
           if (due.transactionReference != null && due.transactionReference!.isNotEmpty) ...[

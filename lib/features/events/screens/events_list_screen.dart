@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -73,14 +72,30 @@ class _EventsListScreenState extends ConsumerState<EventsListScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: eventType,
+                  initialValue: eventType,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Type d\'activité'),
                   items: const [
-                    DropdownMenuItem(value: 'Sortie Détente & Plage', child: Text('Sortie Détente & Plage')),
-                    DropdownMenuItem(value: 'Rencontre & Échange', child: Text('Rencontre & Échange')),
-                    DropdownMenuItem(value: 'Tournoi Sportif', child: Text('Tournoi Sportif')),
-                    DropdownMenuItem(value: 'Culturel & Festif', child: Text('Culturel & Festif')),
-                    DropdownMenuItem(value: 'Assemblée Générale', child: Text('Assemblée Générale')),
+                    DropdownMenuItem(
+                      value: 'Sortie Détente & Plage',
+                      child: Text('Sortie Détente & Plage', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Rencontre & Échange',
+                      child: Text('Rencontre & Échange', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Tournoi Sportif',
+                      child: Text('Tournoi Sportif', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Culturel & Festif',
+                      child: Text('Culturel & Festif', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Assemblée Générale',
+                      child: Text('Assemblée Générale', overflow: TextOverflow.ellipsis),
+                    ),
                   ],
                   onChanged: (v) {
                     if (v != null) setModalState(() => eventType = v);
@@ -305,7 +320,7 @@ class _EventsListScreenState extends ConsumerState<EventsListScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: events.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 14),
+                    separatorBuilder: (_, _) => const SizedBox(height: 14),
                     itemBuilder: (context, index) {
                       final e = events[index];
                       return _buildEventCard(context, e);

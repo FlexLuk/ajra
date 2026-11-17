@@ -282,29 +282,57 @@ class _MembershipApplyScreenState extends ConsumerState<MembershipApplyScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: AjraTextField(
-                        controller: _emailController,
-                        label: 'Adresse e-mail (liée au compte) *',
-                        hint: 'Compte Google connecté',
-                        readOnly: true,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (v) => v == null || !v.contains('@') ? 'E-mail invalide' : null,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AjraTextField(
-                        controller: _phoneController,
-                        label: 'Téléphone (avec indicatif) *',
-                        hint: '+230 5XXX XXXX',
-                        keyboardType: TextInputType.phone,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Requis' : null,
-                      ),
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth < 520) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AjraTextField(
+                            controller: _emailController,
+                            label: 'Adresse e-mail (liée au compte) *',
+                            hint: 'Compte Google connecté',
+                            readOnly: true,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (v) => v == null || !v.contains('@') ? 'E-mail invalide' : null,
+                          ),
+                          const SizedBox(height: 14),
+                          AjraTextField(
+                            controller: _phoneController,
+                            label: 'Téléphone (avec indicatif) *',
+                            hint: '+230 5XXX XXXX',
+                            keyboardType: TextInputType.phone,
+                            validator: (v) => v == null || v.trim().isEmpty ? 'Requis' : null,
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: AjraTextField(
+                            controller: _emailController,
+                            label: 'Adresse e-mail (liée au compte) *',
+                            hint: 'Compte Google connecté',
+                            readOnly: true,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (v) => v == null || !v.contains('@') ? 'E-mail invalide' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: AjraTextField(
+                            controller: _phoneController,
+                            label: 'Téléphone (avec indicatif) *',
+                            hint: '+230 5XXX XXXX',
+                            keyboardType: TextInputType.phone,
+                            validator: (v) => v == null || v.trim().isEmpty ? 'Requis' : null,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 28),
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/security/roles_and_permissions.dart';
+import '../../core/services/app_update_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
@@ -20,6 +21,12 @@ class AppScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) {
+        AppUpdateService.checkOnAppStart(context);
+      }
+    });
+
     final user = ref.watch(currentUserProvider);
     final role = user?.role ?? UserRole.member;
 
@@ -71,7 +78,7 @@ class AppScaffold extends ConsumerWidget {
                 child: Image.asset(
                   AppConstants.logoAsset,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     color: AppColors.primary,
                     alignment: Alignment.center,
                     child: const Text(
@@ -116,8 +123,10 @@ class AppScaffold extends ConsumerWidget {
           ],
         ),
         actions: [
-          StatusBadge.fromRole(role),
-          const SizedBox(width: 4),
+          if (MediaQuery.of(context).size.width >= 390) ...[
+            StatusBadge.fromRole(role),
+            const SizedBox(width: 4),
+          ],
           IconButton(
             icon: const Icon(Icons.chat_outlined),
             tooltip: 'Messagerie & Groupes',

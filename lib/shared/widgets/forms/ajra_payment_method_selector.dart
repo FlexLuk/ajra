@@ -39,6 +39,13 @@ class _AjraPaymentMethodSelectorState extends State<AjraPaymentMethodSelector> {
   late String _selectedBank;
   final TextEditingController _otherController = TextEditingController();
 
+  static const List<String> availableMethods = [
+    'Transfert bancaire',
+    'Virement par Juice',
+    'Espèces',
+    'Autre',
+  ];
+
   static const List<String> availableBanks = [
     'MCB (Mauritius Commercial Bank)',
     'SBM (State Bank of Mauritius)',
@@ -51,9 +58,23 @@ class _AjraPaymentMethodSelectorState extends State<AjraPaymentMethodSelector> {
   @override
   void initState() {
     super.initState();
-    _selectedMethod = widget.initialMethod;
-    _selectedBank = widget.initialBank ?? 'MCB (Mauritius Commercial Bank)';
+    _selectedMethod = availableMethods.contains(widget.initialMethod)
+        ? widget.initialMethod
+        : (widget.initialMethod.toLowerCase().contains('juice')
+            ? 'Virement par Juice'
+            : (widget.initialMethod.toLowerCase().contains('esp')
+                ? 'Espèces'
+                : 'Transfert bancaire'));
+    _selectedBank = availableBanks.contains(widget.initialBank)
+        ? widget.initialBank!
+        : 'MCB (Mauritius Commercial Bank)';
     WidgetsBinding.instance.addPostFrameCallback((_) => _notifyChange());
+  }
+
+  @override
+  void dispose() {
+    _otherController.dispose();
+    super.dispose();
   }
 
   void _notifyChange() {
@@ -98,7 +119,8 @@ class _AjraPaymentMethodSelectorState extends State<AjraPaymentMethodSelector> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButtonFormField<String>(
-          value: _selectedMethod,
+          initialValue: _selectedMethod,
+          isExpanded: true,
           decoration: const InputDecoration(
             labelText: 'Méthode de paiement *',
             prefixIcon: Icon(Icons.payment_outlined, color: AppColors.primary),
@@ -106,19 +128,19 @@ class _AjraPaymentMethodSelectorState extends State<AjraPaymentMethodSelector> {
           items: const [
             DropdownMenuItem(
               value: 'Transfert bancaire',
-              child: Text('Transfert bancaire'),
+              child: Text('Transfert bancaire', overflow: TextOverflow.ellipsis),
             ),
             DropdownMenuItem(
               value: 'Virement par Juice',
-              child: Text('Virement par Juice (MCB)'),
+              child: Text('Virement par Juice (MCB)', overflow: TextOverflow.ellipsis),
             ),
             DropdownMenuItem(
               value: 'Espèces',
-              child: Text('Espèces'),
+              child: Text('Espèces', overflow: TextOverflow.ellipsis),
             ),
             DropdownMenuItem(
               value: 'Autre',
-              child: Text('Autre'),
+              child: Text('Autre', overflow: TextOverflow.ellipsis),
             ),
           ],
           onChanged: (val) {
@@ -131,12 +153,18 @@ class _AjraPaymentMethodSelectorState extends State<AjraPaymentMethodSelector> {
         if (_selectedMethod == 'Transfert bancaire') ...[
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: availableBanks.contains(_selectedBank) ? _selectedBank : availableBanks.first,
+            initialValue: availableBanks.contains(_selectedBank) ? _selectedBank : availableBanks.first,
+            isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Choisir la banque *',
               prefixIcon: Icon(Icons.account_balance_outlined, color: AppColors.primary),
             ),
-            items: availableBanks.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+            items: availableBanks
+                .map((b) => DropdownMenuItem(
+                      value: b,
+                      child: Text(b, overflow: TextOverflow.ellipsis),
+                    ))
+                .toList(),
             onChanged: (val) {
               if (val != null) {
                 setState(() => _selectedBank = val);

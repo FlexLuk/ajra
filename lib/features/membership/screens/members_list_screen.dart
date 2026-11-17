@@ -9,7 +9,6 @@ import '../../../shared/widgets/states/empty_state_view.dart';
 import '../../../shared/widgets/states/error_state_view.dart';
 import '../../../shared/widgets/states/loading_state_view.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../models/member_profile.dart';
 import '../providers/membership_provider.dart';
 import 'member_detail_screen.dart';
 
@@ -180,7 +179,7 @@ class MembersListScreen extends ConsumerWidget {
                   );
                 },
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               ),
 
             // Members List
@@ -204,7 +203,7 @@ class MembersListScreen extends ConsumerWidget {
                   return ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: members.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final m = members[index];
                       final isCurrentUser = currentUser?.uid == m.userId;

@@ -148,10 +148,11 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
               const Text('Modifier le statut officiel du membre :'),
               const SizedBox(height: 12),
               DropdownButtonFormField<MembershipStatus>(
-                value: selectedStatus,
+                initialValue: selectedStatus,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Statut du membre'),
                 items: MembershipStatus.values.map((s) {
-                  return DropdownMenuItem(value: s, child: Text(s.label));
+                  return DropdownMenuItem(value: s, child: Text(s.label, overflow: TextOverflow.ellipsis));
                 }).toList(),
                 onChanged: (v) {
                   if (v != null) setModalState(() => selectedStatus = v);
@@ -387,9 +388,9 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
       );
     }
 
-    final isPrivileged = currentUser != null &&
-        (currentUser.isAdmin || currentUser.canReviewMembership || currentUser.uid == _member.userId);
-    final canReview = currentUser != null &&
+    final isPrivileged =
+        currentUser.isAdmin || currentUser.canReviewMembership || currentUser.uid == _member.userId;
+    final canReview =
         (currentUser.isAdmin || (currentUser.canReviewMembership && currentUser.uid != _member.userId)) &&
         _member.isPending;
 
@@ -410,14 +411,13 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
         ),
         title: Text(_member.fullName),
         actions: [
-          if (currentUser != null && currentUser.isAdmin)
+          if (currentUser.isAdmin)
             IconButton(
               icon: const Icon(Icons.edit_note_outlined),
               tooltip: 'Modifier le statut officiel',
               onPressed: _openAdminStatusDialog,
             ),
-          if (currentUser != null &&
-              currentUser.isAdmin &&
+          if (currentUser.isAdmin &&
               _member.userId != currentUser.uid &&
               _member.email.toLowerCase().trim() != 'heriniaina.luk@gmail.com')
             IconButton(
@@ -690,8 +690,7 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
             ],
 
             // Admin Danger Zone
-            if (currentUser != null &&
-                currentUser.isAdmin &&
+            if (currentUser.isAdmin &&
                 _member.userId != currentUser.uid &&
                 _member.email.toLowerCase().trim() != 'heriniaina.luk@gmail.com') ...[
               Container(
@@ -783,8 +782,8 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 150,
+          Flexible(
+            flex: 2,
             child: Text(
               label,
               style: const TextStyle(
@@ -793,9 +792,13 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
               ),
             ),
           ),
+          const SizedBox(width: 12),
           Expanded(
+            flex: 3,
             child: Text(
               value,
+              textAlign: TextAlign.right,
+              softWrap: true,
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

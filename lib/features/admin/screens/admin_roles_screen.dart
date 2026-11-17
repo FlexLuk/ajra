@@ -337,10 +337,11 @@ class _AdminRolesScreenState extends ConsumerState<AdminRolesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<UserRole>(
-                  value: selectedRole,
+                  initialValue: selectedRole,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Rôle attribué'),
                   items: UserRole.values.map((r) {
-                    return DropdownMenuItem(value: r, child: Text(r.label));
+                    return DropdownMenuItem(value: r, child: Text(r.label, overflow: TextOverflow.ellipsis));
                   }).toList(),
                   onChanged: (v) {
                     if (v != null) setModalState(() => selectedRole = v);
@@ -352,7 +353,7 @@ class _AdminRolesScreenState extends ConsumerState<AdminRolesScreen> {
                   subtitle: const Text('Désactive tout accès à l\'application'),
                   value: isSuspended,
                   onChanged: (val) => setModalState(() => isSuspended = val),
-                  activeColor: AppColors.danger,
+                  activeThumbColor: AppColors.danger,
                   contentPadding: EdgeInsets.zero,
                 ),
                 if (selectedRole == UserRole.bureau) ...[
@@ -433,7 +434,7 @@ class _AdminRolesScreenState extends ConsumerState<AdminRolesScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => MemberDetailScreen(member: memberProfile!),
+                              builder: (_) => MemberDetailScreen(member: memberProfile),
                             ),
                           );
                         },
@@ -441,15 +442,17 @@ class _AdminRolesScreenState extends ConsumerState<AdminRolesScreen> {
                     ],
                   ),
                 ] else ...[
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       StatusBadge.fromMembershipStatus(memberProfile.status),
-                      const SizedBox(width: 8),
                       Text(
                         memberProfile.memberNumber,
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                       ),
-                      const Spacer(),
                       TextButton.icon(
                         icon: const Icon(Icons.open_in_new, size: 16),
                         label: const Text('Voir fiche'),
@@ -458,7 +461,7 @@ class _AdminRolesScreenState extends ConsumerState<AdminRolesScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => MemberDetailScreen(member: memberProfile!),
+                              builder: (_) => MemberDetailScreen(member: memberProfile),
                             ),
                           );
                         },
@@ -558,7 +561,7 @@ class _AdminRolesScreenState extends ConsumerState<AdminRolesScreen> {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: users.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final u = users[index];
               final member = membersByUserId[u.uid];
@@ -645,9 +648,12 @@ class _AdminRolesScreenState extends ConsumerState<AdminRolesScreen> {
                       ),
                       const SizedBox(height: 10),
                       const Divider(height: 1),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           if (currentUser != null &&
                               currentUser.isAdmin &&
@@ -656,12 +662,16 @@ class _AdminRolesScreenState extends ConsumerState<AdminRolesScreen> {
                             IconButton(
                               icon: const Icon(Icons.delete_forever_outlined, color: AppColors.danger, size: 20),
                               tooltip: 'Supprimer ce compte et toutes ses données',
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(6),
                               onPressed: () => _deleteUserAccount(u),
                             )
                           else
                             const SizedBox.shrink(),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               if (member == null)
                                 TextButton.icon(
@@ -676,7 +686,7 @@ class _AdminRolesScreenState extends ConsumerState<AdminRolesScreen> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.success,
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                     minimumSize: Size.zero,
                                   ),
                                   onPressed: () => _createOrActivateMemberProfile(u, approveDirectly: true),
@@ -694,7 +704,6 @@ class _AdminRolesScreenState extends ConsumerState<AdminRolesScreen> {
                                     );
                                   },
                                 ),
-                              const SizedBox(width: 8),
                               ElevatedButton.icon(
                                 icon: const Icon(Icons.edit_outlined, size: 16),
                                 label: const Text('Modifier rôle', style: TextStyle(fontSize: 12)),

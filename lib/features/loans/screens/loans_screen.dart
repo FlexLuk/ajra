@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -143,15 +142,25 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
                   if (disburseImmediately) ...[
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: selectedDisbursementAccount,
+                      initialValue: selectedDisbursementAccount,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Compte AJRA à débiter *',
                         isDense: true,
                       ),
                       items: const [
-                        DropdownMenuItem(value: AppConstants.accountCash, child: Text('Caisse Espèces AJRA')),
-                        DropdownMenuItem(value: AppConstants.accountBank, child: Text('Compte Bancaire Principal AJRA')),
-                        DropdownMenuItem(value: AppConstants.accountJuice, child: Text('Compte Juice AJRA (MCB)')),
+                        DropdownMenuItem(
+                          value: AppConstants.accountCash,
+                          child: Text('Caisse Espèces AJRA', overflow: TextOverflow.ellipsis),
+                        ),
+                        DropdownMenuItem(
+                          value: AppConstants.accountBank,
+                          child: Text('Compte Bancaire Principal AJRA', overflow: TextOverflow.ellipsis),
+                        ),
+                        DropdownMenuItem(
+                          value: AppConstants.accountJuice,
+                          child: Text('Compte Juice AJRA (MCB)', overflow: TextOverflow.ellipsis),
+                        ),
                       ],
                       onChanged: (v) {
                         if (v != null) setModalState(() => selectedDisbursementAccount = v);
@@ -323,12 +332,22 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedAccountId,
+                  initialValue: selectedAccountId,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Compte AJRA crédité *'),
                   items: const [
-                    DropdownMenuItem(value: AppConstants.accountCash, child: Text('Caisse Espèces')),
-                    DropdownMenuItem(value: AppConstants.accountBank, child: Text('Compte Bancaire Principal')),
-                    DropdownMenuItem(value: AppConstants.accountJuice, child: Text('Juice (MCB)')),
+                    DropdownMenuItem(
+                      value: AppConstants.accountCash,
+                      child: Text('Caisse Espèces', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: AppConstants.accountBank,
+                      child: Text('Compte Bancaire Principal', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: AppConstants.accountJuice,
+                      child: Text('Juice (MCB)', overflow: TextOverflow.ellipsis),
+                    ),
                   ],
                   onChanged: (v) {
                     if (v != null) setModalState(() => selectedAccountId = v);
@@ -428,12 +447,22 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: selectedDisbursementAccount,
+                initialValue: selectedDisbursementAccount,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Compte de l\'association à débiter *'),
                 items: const [
-                  DropdownMenuItem(value: AppConstants.accountCash, child: Text('Caisse Espèces')),
-                  DropdownMenuItem(value: AppConstants.accountBank, child: Text('Compte Bancaire Principal')),
-                  DropdownMenuItem(value: AppConstants.accountJuice, child: Text('Juice (MCB)')),
+                  DropdownMenuItem(
+                    value: AppConstants.accountCash,
+                    child: Text('Caisse Espèces', overflow: TextOverflow.ellipsis),
+                  ),
+                  DropdownMenuItem(
+                    value: AppConstants.accountBank,
+                    child: Text('Compte Bancaire Principal', overflow: TextOverflow.ellipsis),
+                  ),
+                  DropdownMenuItem(
+                    value: AppConstants.accountJuice,
+                    child: Text('Juice (MCB)', overflow: TextOverflow.ellipsis),
+                  ),
                 ],
                 onChanged: (v) {
                   if (v != null) setModalState(() => selectedDisbursementAccount = v);
@@ -657,7 +686,7 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final loan = filtered[index];
                       return _buildLoanCard(context, loan, canManage);
@@ -723,7 +752,6 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
           statusFg = AppColors.danger;
           break;
         case LoanStatus.pending:
-        default:
           statusBg = AppColors.warningLight;
           statusFg = AppColors.warning;
           break;
@@ -828,41 +856,59 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
 
           // Montants & Progression
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Emprunté', style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
-                  Text(
-                    loan.amount.toFormattedString(),
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text('Remboursé', style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
-                  Text(
-                    loan.amountRepaid.toFormattedString(),
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.success),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Text('Reste dû', style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
-                  Text(
-                    loan.remainingAmount.toFormattedString(),
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: loan.remainingAmount.cents > 0 ? AppColors.warning : AppColors.success,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Emprunté', style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        loan.amount.toFormattedString(),
+                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text('Remboursé', style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        loan.amountRepaid.toFormattedString(),
+                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppColors.success),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text('Reste dû', style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        loan.remainingAmount.toFormattedString(),
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.bold,
+                          color: loan.remainingAmount.cents > 0 ? AppColors.warning : AppColors.success,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -883,19 +929,27 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
           const SizedBox(height: 12),
 
           // Dates d'échéance et de demande
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 4,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Icon(Icons.calendar_today_outlined, size: 14, color: Theme.of(context).textTheme.bodySmall?.color),
-              const SizedBox(width: 6),
-              Text(
-                'Échéance : ${dateFormat.format(loan.dueDate)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: loan.isOverdueCalculated ? FontWeight.bold : FontWeight.normal,
-                  color: loan.isOverdueCalculated ? AppColors.danger : null,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.calendar_today_outlined, size: 14, color: Theme.of(context).textTheme.bodySmall?.color),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Échéance : ${dateFormat.format(loan.dueDate)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: loan.isOverdueCalculated ? FontWeight.bold : FontWeight.normal,
+                      color: loan.isOverdueCalculated ? AppColors.danger : null,
+                    ),
+                  ),
+                ],
               ),
-              const Spacer(),
               Text(
                 'Demandé le ${dateFormat.format(loan.requestedAt)}',
                 style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),

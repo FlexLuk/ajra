@@ -1,26 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/app_scaffold.dart';
-import '../../../shared/widgets/buttons/ajra_button.dart';
 import '../../../shared/widgets/cards/metric_card.dart';
 import '../../../shared/widgets/forms/ajra_currency_field.dart';
 import '../../../shared/widgets/forms/ajra_date_field.dart';
 import '../../../shared/widgets/forms/ajra_text_field.dart';
-import '../../../shared/widgets/indicators/status_badge.dart';
 import '../../../shared/widgets/states/empty_state_view.dart';
 import '../../../shared/widgets/states/error_state_view.dart';
 import '../../../shared/widgets/states/loading_state_view.dart';
 import '../../accounting/models/financial_account.dart';
 import '../../accounting/models/financial_transaction.dart';
 import '../../accounting/providers/accounting_provider.dart';
-import '../../accounting/repositories/accounting_repository.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dues/widgets/dues_summary_share_dialog.dart';
 
@@ -160,21 +156,37 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedCategory,
+                  initialValue: selectedCategory,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Catégorie'),
-                  items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  items: categories
+                      .map((c) => DropdownMenuItem(
+                            value: c,
+                            child: Text(c, overflow: TextOverflow.ellipsis),
+                          ))
+                      .toList(),
                   onChanged: (v) {
                     if (v != null) setModalState(() => selectedCategory = v);
                   },
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedAccount,
+                  initialValue: selectedAccount,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Compte concerné'),
                   items: const [
-                    DropdownMenuItem(value: AppConstants.accountCash, child: Text('Caisse Espèces')),
-                    DropdownMenuItem(value: AppConstants.accountBank, child: Text('Compte Bancaire Principal')),
-                    DropdownMenuItem(value: AppConstants.accountJuice, child: Text('Juice (MCB)')),
+                    DropdownMenuItem(
+                      value: AppConstants.accountCash,
+                      child: Text('Caisse Espèces', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: AppConstants.accountBank,
+                      child: Text('Compte Bancaire Principal', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: AppConstants.accountJuice,
+                      child: Text('Juice (MCB)', overflow: TextOverflow.ellipsis),
+                    ),
                   ],
                   onChanged: (v) {
                     if (v != null) setModalState(() => selectedAccount = v);
@@ -422,13 +434,17 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          netBalance.toFormattedString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 34,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            netBalance.toFormattedString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -447,19 +463,28 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                                         size: 16, color: AppColors.successLight),
                                   ),
                                   const SizedBox(width: 8),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('Recettes validées',
-                                          style: TextStyle(color: Colors.white60, fontSize: 11)),
-                                      Text(
-                                        totalIncome.toFormattedString(),
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Recettes validées',
+                                          style: TextStyle(color: Colors.white60, fontSize: 11),
+                                        ),
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            totalIncome.toFormattedString(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -479,19 +504,28 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                                         size: 16, color: AppColors.dangerLight),
                                   ),
                                   const SizedBox(width: 8),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('Dépenses validées',
-                                          style: TextStyle(color: Colors.white60, fontSize: 11)),
-                                      Text(
-                                        totalExpense.toFormattedString(),
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Dépenses validées',
+                                          style: TextStyle(color: Colors.white60, fontSize: 11),
+                                        ),
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            totalExpense.toFormattedString(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -541,33 +575,74 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                     const SizedBox(height: 16),
                   ],
 
-                  // Accounts Row
+                  // Accounts Grid (Responsive so 3 accounts never crowd mobile width)
                   accountsAsync.when(
                     data: (accounts) {
-                      return Row(
-                        children: accounts.map((acc) {
-                          final isCash = acc.id == AppConstants.accountCash;
-                          final isJuice = acc.id == AppConstants.accountJuice;
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                              child: MetricCard(
+                      if (accounts.isEmpty) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            Widget buildAccCard(FinancialAccount acc) {
+                              final isCash = acc.id == AppConstants.accountCash;
+                              final isJuice = acc.id == AppConstants.accountJuice;
+                              return MetricCard(
                                 title: acc.name,
                                 value: acc.currentBalance.toFormattedString(),
                                 icon: isCash
                                     ? Icons.payments_outlined
-                                    : (isJuice ? Icons.phone_android_rounded : Icons.account_balance_outlined),
+                                    : (isJuice
+                                        ? Icons.phone_android_rounded
+                                        : Icons.account_balance_outlined),
                                 iconColor: isCash
                                     ? AppColors.secondary
                                     : (isJuice ? const Color(0xFFF97316) : AppColors.primary),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                              );
+                            }
+
+                            if (constraints.maxWidth >= 680) {
+                              return Row(
+                                children: [
+                                  for (int i = 0; i < accounts.length; i++) ...[
+                                    if (i > 0) const SizedBox(width: 12),
+                                    Expanded(child: buildAccCard(accounts[i])),
+                                  ],
+                                ],
+                              );
+                            }
+
+                            if (accounts.length == 3 && constraints.maxWidth >= 340) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(child: buildAccCard(accounts[0])),
+                                      const SizedBox(width: 10),
+                                      Expanded(child: buildAccCard(accounts[1])),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  buildAccCard(accounts[2]),
+                                ],
+                              );
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                for (int i = 0; i < accounts.length; i++) ...[
+                                  if (i > 0) const SizedBox(height: 10),
+                                  buildAccCard(accounts[i]),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
                       );
                     },
                     loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                   ),
                   // Raccourci vers Emprunts des Membres
                   Container(
@@ -848,7 +923,7 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: filteredTxs.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final tx = filteredTxs[index];
                         final isIncome = tx.type == TransactionType.income;
@@ -919,7 +994,7 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                                         color: Theme.of(context).textTheme.bodySmall?.color,
                                       ),
                                     ),
-                                    if (tx.reference != null && tx.reference!.isNotEmpty) ...[
+                                    if (tx.reference.isNotEmpty) ...[
                                       const SizedBox(height: 2),
                                       Text(
                                         'Réf : ${tx.reference}',

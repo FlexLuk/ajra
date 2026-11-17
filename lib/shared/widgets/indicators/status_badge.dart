@@ -29,7 +29,7 @@ class StatusBadge extends StatelessWidget {
         return const StatusBadge(
           label: 'En attente',
           backgroundColor: AppColors.warningLight,
-          textColor: AppColors.warning,
+          textColor: Color(0xFFB45309),
           icon: Icons.hourglass_top,
         );
       case MembershipStatus.rejected:
@@ -105,7 +105,7 @@ class StatusBadge extends StatelessWidget {
       return const StatusBadge(
         label: 'En attente de vérification',
         backgroundColor: AppColors.warningLight,
-        textColor: AppColors.warning,
+        textColor: Color(0xFFB45309),
         icon: Icons.schedule,
       );
     } else {
@@ -130,15 +130,18 @@ class StatusBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: textColor),
+            Icon(icon, size: 13.5, color: textColor),
             const SizedBox(width: 4),
           ],
-          Text(
-            label,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              label,
+              softWrap: true,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

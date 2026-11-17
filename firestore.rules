@@ -306,7 +306,7 @@ service cloud.firestore {
     // 15. Paramètres globaux (appSettings)
     // ==========================================
     match /appSettings/{settingId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() || settingId == 'app_version';
       allow write: if isAdmin();
     }
   }

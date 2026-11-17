@@ -13,6 +13,9 @@ class MockAuthRepository implements BaseAuthRepository {
   AppUser? get currentUser => _user;
 
   @override
+  bool get isPasswordProviderLinked => _user?.hasPassword ?? false;
+
+  @override
   Stream<AppUser?> get userStream => _controller.stream;
 
   @override
@@ -28,6 +31,43 @@ class MockAuthRepository implements BaseAuthRepository {
     _controller.add(_user);
     return _user;
   }
+
+  @override
+  Future<AppUser?> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    if (_user == null || _user!.email.toLowerCase() != email.trim().toLowerCase()) {
+      throw Exception('Ce compte n\'existe pas sur le serveur AJRA.');
+    }
+    _user = _user!.copyWith(
+      hasPassword: true,
+      lastLoginAt: DateTime.now(),
+    );
+    _controller.add(_user);
+    return _user;
+  }
+
+  @override
+  Future<void> createOrUpdatePassword({
+    required String newPassword,
+    String? currentPassword,
+  }) async {
+    if (newPassword.length < 6) {
+      throw Exception('Le mot de passe doit contenir au moins 6 caractères.');
+    }
+    if (_user != null) {
+      _user = _user!.copyWith(
+        hasPassword: true,
+        passwordUpdatedAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      _controller.add(_user);
+    }
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {}
 
   @override
   Future<AppUser?> signInAsDemoUser({UserRole role = UserRole.admin}) async {

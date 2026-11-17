@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
 import '../../accounting/models/financial_transaction.dart';
-import '../../accounting/repositories/accounting_repository.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dues/widgets/dues_summary_share_dialog.dart';
 import '../../membership/providers/membership_provider.dart';
@@ -20,18 +18,22 @@ class ReportsScreen extends ConsumerWidget {
   Future<void> _exportMembersCsv(BuildContext context, WidgetRef ref) async {
     final members = await ref.read(membershipRepositoryProvider).watchAllMembers().first;
     final csv = ExportService.exportMembersToCsv(members);
-    await Share.share(
-      csv,
-      subject: 'AJRA_Membres_${DateTime.now().year}.csv',
+    await SharePlus.instance.share(
+      ShareParams(
+        text: csv,
+        subject: 'AJRA_Membres_${DateTime.now().year}.csv',
+      ),
     );
   }
 
   Future<void> _exportTransactionsCsv(BuildContext context, WidgetRef ref) async {
     final txs = await ref.read(accountingRepoProvider).watchTransactions().first;
     final csv = ExportService.exportTransactionsToCsv(txs);
-    await Share.share(
-      csv,
-      subject: 'AJRA_Comptabilite_${DateTime.now().year}.csv',
+    await SharePlus.instance.share(
+      ShareParams(
+        text: csv,
+        subject: 'AJRA_Comptabilite_${DateTime.now().year}.csv',
+      ),
     );
   }
 
