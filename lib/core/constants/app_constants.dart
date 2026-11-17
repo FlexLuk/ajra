@@ -5,8 +5,8 @@ class AppConstants {
   static const String currencySymbol = 'Rs.';
   static const String defaultLocale = 'fr_FR';
   static const String logoAsset = 'assets/images/logo.png';
-  static const String appVersion = '1.4.9';
-  static const int appBuildNumber = 4;
+  static const String appVersion = '1.5.0';
+  static const int appBuildNumber = 5;
   static const String androidPackageId = 'com.ajra.ajra';
   static const String apkDownloadUrl = 'https://ajra-app-8ae42.web.app/app.apk';
   static const String apkFallbackDownloadUrl = 'https://ajra-app-8ae42.web.app/ajra.apk';

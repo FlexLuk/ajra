@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/routing/ajra_back_navigation.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -32,17 +33,7 @@ class MembersListScreen extends ConsumerWidget {
       selectedIndex: 1,
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            tooltip: 'Retour',
-            onPressed: () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              } else {
-                context.go('/dashboard');
-              }
-            },
-          ),
+          leading: const AjraBackButton(fallbackRoute: '/dashboard'),
           title: const Text('Membres de l\'association'),
           actions: [
             if (currentUser != null && currentUser.isAdmin)

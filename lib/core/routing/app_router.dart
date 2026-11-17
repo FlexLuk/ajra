@@ -23,10 +23,24 @@ import '../../features/reports/screens/reports_screen.dart';
 import '../../features/treasury/screens/treasury_dashboard_screen.dart';
 import '../../features/user_profile/screens/profile_screen.dart';
 import '../../features/about/screens/about_screen.dart';
+import 'ajra_back_navigation.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   ref.watch(authStateProvider);
   final isValidatedAndActive = ref.watch(isMemberValidatedAndActiveProvider);
+
+  GoRoute _scopedRoute(
+    String path,
+    Widget Function(BuildContext context, GoRouterState state) builder,
+  ) {
+    return GoRoute(
+      path: path,
+      builder: (context, state) => AjraRouteBackScope(
+        location: state.matchedLocation,
+        child: builder(context, state),
+      ),
+    );
+  }
 
   return GoRouter(
     initialLocation: '/splash',
@@ -35,61 +49,61 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
       ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
+      _scopedRoute(
+        '/login',
+        (context, state) => const LoginScreen(),
       ),
-      GoRoute(
-        path: '/dashboard',
-        builder: (context, state) => const DashboardScreen(),
+      _scopedRoute(
+        '/dashboard',
+        (context, state) => const DashboardScreen(),
       ),
-      GoRoute(
-        path: '/members',
-        builder: (context, state) => const MembersListScreen(),
+      _scopedRoute(
+        '/members',
+        (context, state) => const MembersListScreen(),
       ),
-      GoRoute(
-        path: '/membership-apply',
-        builder: (context, state) => const MembershipApplyScreen(),
+      _scopedRoute(
+        '/membership-apply',
+        (context, state) => const MembershipApplyScreen(),
       ),
-      GoRoute(
-        path: '/membership-status',
-        builder: (context, state) => const MembershipStatusScreen(),
+      _scopedRoute(
+        '/membership-status',
+        (context, state) => const MembershipStatusScreen(),
       ),
-      GoRoute(
-        path: '/membership-fee',
-        builder: (context, state) => const MembershipFeeScreen(),
+      _scopedRoute(
+        '/membership-fee',
+        (context, state) => const MembershipFeeScreen(),
       ),
-      GoRoute(
-        path: '/dues',
-        builder: (context, state) => const DuesListScreen(),
+      _scopedRoute(
+        '/dues',
+        (context, state) => const DuesListScreen(),
       ),
-      GoRoute(
-        path: '/treasury',
-        builder: (context, state) => const TreasuryDashboardScreen(),
+      _scopedRoute(
+        '/treasury',
+        (context, state) => const TreasuryDashboardScreen(),
       ),
-      GoRoute(
-        path: '/loans',
-        builder: (context, state) => const LoansScreen(),
+      _scopedRoute(
+        '/loans',
+        (context, state) => const LoansScreen(),
       ),
-      GoRoute(
-        path: '/events',
-        builder: (context, state) => const EventsListScreen(),
+      _scopedRoute(
+        '/events',
+        (context, state) => const EventsListScreen(),
       ),
-      GoRoute(
-        path: '/posts',
-        builder: (context, state) => const PostsScreen(),
+      _scopedRoute(
+        '/posts',
+        (context, state) => const PostsScreen(),
       ),
-      GoRoute(
-        path: '/notifications',
-        builder: (context, state) => const NotificationsScreen(),
+      _scopedRoute(
+        '/notifications',
+        (context, state) => const NotificationsScreen(),
       ),
-      GoRoute(
-        path: '/conversations',
-        builder: (context, state) => const ConversationsScreen(),
+      _scopedRoute(
+        '/conversations',
+        (context, state) => const ConversationsScreen(),
       ),
-      GoRoute(
-        path: '/chat/:convId',
-        builder: (context, state) {
+      _scopedRoute(
+        '/chat/:convId',
+        (context, state) {
           final convId = state.pathParameters['convId'] ?? '';
           return ChatScreen(
             conversationId: convId,
@@ -97,25 +111,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      GoRoute(
-        path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
+      _scopedRoute(
+        '/profile',
+        (context, state) => const ProfileScreen(),
       ),
-      GoRoute(
-        path: '/about',
-        builder: (context, state) => const AboutScreen(),
+      _scopedRoute(
+        '/about',
+        (context, state) => const AboutScreen(),
       ),
-      GoRoute(
-        path: '/admin/roles',
-        builder: (context, state) => const AdminRolesScreen(),
+      _scopedRoute(
+        '/admin/roles',
+        (context, state) => const AdminRolesScreen(),
       ),
-      GoRoute(
-        path: '/reports',
-        builder: (context, state) => const ReportsScreen(),
+      _scopedRoute(
+        '/reports',
+        (context, state) => const ReportsScreen(),
       ),
-      GoRoute(
-        path: '/audit',
-        builder: (context, state) => const AuditLogScreen(),
+      _scopedRoute(
+        '/audit',
+        (context, state) => const AuditLogScreen(),
       ),
     ],
     redirect: (context, state) {

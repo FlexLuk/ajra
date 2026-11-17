@@ -33,6 +33,7 @@ class DashboardScreen extends ConsumerWidget {
 
     return AppScaffold(
       selectedIndex: 0,
+      showDefaultAppBar: true,
       child: Scaffold(
         body: SafeArea(
           child: RefreshIndicator(

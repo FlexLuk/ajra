@@ -1,9 +1,9 @@
 ﻿{
-    "version":  "1.4.9",
-    "releaseNotes":  "Nouveau design AJRA v1.4.9 : Carte de membre numérique officielle, suivi de régularité des cotisations, résumé WhatsApp de trésorerie en 1 clic, connexion par identifiant/mot de passe et vérification automatique MAJ.",
+    "version":  "1.5.0",
+    "releaseNotes":  "AJRA v1.5.0 : Navigation retour sécurisée (historique restauré, suppression des doubles flèches, confirmation par double appui pour quitter l'application depuis l'accueil) et stabilité de production.",
     "playStoreUrl":  "https://play.google.com/store/apps/details?id=com.ajra.ajra",
     "apkUrl":  "https://ajra-app-8ae42.web.app/app.apk",
-    "updatedAt":  "2026-11-17T12:02:42.5010868+04:00",
-    "md5":  "63ab4803687f55546831381c70e8a151",
-    "buildNumber":  4
+    "updatedAt":  "2026-11-17T15:16:00.0000000+04:00",
+    "md5":  "8114b7496ced0498300bfe905163987a",
+    "buildNumber":  5
 }

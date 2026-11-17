@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/routing/ajra_back_navigation.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
@@ -181,17 +182,7 @@ class _MembershipApplyScreenState extends ConsumerState<MembershipApplyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Retour',
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              context.go('/dashboard');
-            }
-          },
-        ),
+        leading: const AjraBackButton(fallbackRoute: '/membership-status'),
         title: const Text('Demande d\'adhésion AJRA'),
       ),
       body: SafeArea(

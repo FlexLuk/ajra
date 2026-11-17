@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/routing/ajra_back_navigation.dart';
 import '../../../core/services/app_update_service.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -55,24 +56,14 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Retour',
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              context.go('/dashboard');
-            }
-          },
-        ),
+        leading: const AjraBackButton(),
         title: const Text('À propos & Statuts AJRA'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(icon: Icon(Icons.gavel_rounded, size: 20), text: 'Statuts Officiels'),
             Tab(icon: Icon(Icons.security_outlined, size: 20), text: 'RPD & Règlement'),
-            Tab(icon: Icon(Icons.info_outline, size: 20), text: 'Application (1.4.9)'),
+            Tab(icon: Icon(Icons.info_outline, size: 20), text: 'Application (1.5.0)'),
           ],
         ),
       ),
@@ -378,7 +369,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
-                  'Version 1.4.9 (Release Production)',
+                  'Version 1.5.0 (Release Production)',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/routing/ajra_back_navigation.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/services/app_update_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -112,20 +113,15 @@ class _MembershipStatusScreenState extends ConsumerState<MembershipStatusScreen>
         : feeConfig.amount;
 
     final isFullyActive = member != null && member.status == MembershipStatus.active;
+    final canGoBack = AjraNavigationHistory.canGoBackFrom(
+      '/membership-status',
+      isLoggedIn: user != null,
+      isValidatedAndActive: isFullyActive,
+    );
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Retour',
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              context.go('/dashboard');
-            }
-          },
-        ),
+        leading: canGoBack ? const AjraBackButton(fallbackRoute: '/dashboard') : null,
         title: const Text('Suivi de mon Adhésion & Cotisation'),
         actions: [
           IconButton(

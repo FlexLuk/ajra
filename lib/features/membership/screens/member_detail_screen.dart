@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/routing/ajra_back_navigation.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
@@ -340,17 +341,7 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
     if (!canView) {
       return Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            tooltip: 'Retour',
-            onPressed: () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              } else {
-                context.go('/members');
-              }
-            },
-          ),
+          leading: const AjraBackButton(fallbackRoute: '/members'),
           title: const Text('Accès restreint'),
         ),
         body: Center(
@@ -373,13 +364,7 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () {
-                    if (Navigator.canPop(context)) {
-                      Navigator.pop(context);
-                    } else {
-                      context.go('/members');
-                    }
-                  },
+                  onPressed: () => AjraNavigationHistory.handleBack(context, ref, fallbackRoute: '/members'),
                   child: const Text('Retour'),
                 ),
               ],
@@ -399,17 +384,7 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Retour',
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              context.go('/members');
-            }
-          },
-        ),
+        leading: const AjraBackButton(fallbackRoute: '/members'),
         title: Text(_member.fullName),
         actions: [
           if (currentUser.isAdmin)

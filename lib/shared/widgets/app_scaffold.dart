@@ -12,11 +12,13 @@ import 'indicators/status_badge.dart';
 class AppScaffold extends ConsumerWidget {
   final Widget child;
   final int selectedIndex;
+  final bool showDefaultAppBar;
 
   const AppScaffold({
     super.key,
     required this.child,
     required this.selectedIndex,
+    this.showDefaultAppBar = false,
   });
 
   @override
@@ -35,26 +37,15 @@ class AppScaffold extends ConsumerWidget {
     final isWide = MediaQuery.of(context).size.width >= 800;
 
     return Scaffold(
-      appBar: AppBar(
-        scrolledUnderElevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: AppColors.borderLight.withValues(alpha: 0.8), height: 1),
-        ),
-        leading: selectedIndex != 0
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                tooltip: 'Retour à l\'accueil',
-                onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  } else {
-                    context.go('/dashboard');
-                  }
-                },
-              )
-            : null,
-        title: Row(
+      appBar: showDefaultAppBar
+          ? AppBar(
+              scrolledUnderElevation: 0,
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(1),
+                child: Container(color: AppColors.borderLight.withValues(alpha: 0.8), height: 1),
+              ),
+              leading: null,
+              title: Row(
           children: [
             Container(
               width: 38,
@@ -197,7 +188,7 @@ class AppScaffold extends ConsumerWidget {
           ),
           const SizedBox(width: 8),
         ],
-      ),
+      ) : null,
       body: Row(
         children: [
           if (isWide)

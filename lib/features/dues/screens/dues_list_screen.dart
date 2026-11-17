@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/routing/ajra_back_navigation.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -895,17 +896,7 @@ class _DuesListScreenState extends ConsumerState<DuesListScreen> with SingleTick
       selectedIndex: 2,
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            tooltip: 'Retour',
-            onPressed: () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              } else {
-                context.go('/dashboard');
-              }
-            },
-          ),
+          leading: const AjraBackButton(fallbackRoute: '/dashboard'),
           title: const Text('Cotisations Mensuelles'),
           actions: [
             if (isPrivileged) ...[

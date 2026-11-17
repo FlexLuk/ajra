@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/routing/ajra_back_navigation.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -512,17 +513,7 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
       selectedIndex: 3, // Section Trésorerie & Finances
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            tooltip: 'Retour',
-            onPressed: () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              } else {
-                context.go('/dashboard');
-              }
-            },
-          ),
+          leading: const AjraBackButton(fallbackRoute: '/treasury'),
           title: const Text('Emprunts des Membres'),
           actions: [
             IconButton(

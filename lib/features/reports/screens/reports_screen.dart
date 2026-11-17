@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../core/routing/ajra_back_navigation.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
@@ -69,17 +70,7 @@ class ReportsScreen extends ConsumerWidget {
     if (!canViewReports) {
       return Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            tooltip: 'Retour',
-            onPressed: () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              } else {
-                context.go('/dashboard');
-              }
-            },
-          ),
+          leading: const AjraBackButton(fallbackRoute: '/dashboard'),
           title: const Text('Rapports'),
         ),
         body: const Center(
@@ -90,17 +81,7 @@ class ReportsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Retour',
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              context.go('/dashboard');
-            }
-          },
-        ),
+        leading: const AjraBackButton(fallbackRoute: '/dashboard'),
         title: const Text('Rapports & Exports Officiels'),
       ),
       body: ListView(
