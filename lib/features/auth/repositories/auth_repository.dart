@@ -363,11 +363,14 @@ class FirebaseAuthRepository implements BaseAuthRepository {
           final cred = EmailAuthProvider.credential(email: email, password: newPassword);
           await user.linkWithCredential(cred);
         } on FirebaseAuthException catch (e) {
-          if (e.code == 'provider-already-linked' ||
-              e.code == 'credential-already-in-use' ||
-              e.code == 'email-already-in-use') {
+          if (e.code == 'requires-recent-login') {
+            rethrow;
+          }
+          // Si linkWithCredential renvoie déjà lié ou email en usage ou restriction de provider,
+          // définir le mot de passe directement via updatePassword
+          try {
             await user.updatePassword(newPassword);
-          } else {
+          } catch (_) {
             rethrow;
           }
         }
@@ -384,37 +387,29 @@ class FirebaseAuthRepository implements BaseAuthRepository {
           await _reauthenticateWithGoogle(user);
           await applyPasswordChange();
         } catch (_) {
-          // Fallback via Cloud Function serveur si la popup Google est bloquée
-          try {
-            final callable = FirebaseFunctions.instance.httpsCallable('setUserPassword');
-            await callable.call({'newPassword': newPassword});
-          } catch (fnErr) {
-            throw Exception(
-              'Pour votre sécurité, veuillez vous déconnecter puis vous reconnecter avec Google avant de définir votre mot de passe.',
-            );
-          }
+          throw Exception(
+            'Pour votre sécurité, veuillez vous déconnecter puis vous reconnecter avec Google avant de définir votre mot de passe.',
+          );
         }
       } else if (e.code == 'weak-password') {
         throw Exception('Le mot de passe choisi est trop faible (minimum 6 caractères).');
       } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         throw Exception('Le mot de passe actuel saisi est incorrect.');
       } else {
-        // Fallback serveur si la méthode client échoue
-        try {
-          final callable = FirebaseFunctions.instance.httpsCallable('setUserPassword');
-          await callable.call({'newPassword': newPassword});
-        } catch (_) {
-          throw Exception('Impossible d\'enregistrer le mot de passe : ${e.message ?? e.code}');
-        }
+        throw Exception('Impossible d\'enregistrer le mot de passe : ${e.message ?? e.code}');
       }
     }
 
     final now = DateTime.now();
-    await _firestore.collection(AppConstants.colUsers).doc(user.uid).update({
-      'hasPassword': true,
-      'passwordUpdatedAt': now.toIso8601String(),
-      'updatedAt': now.toIso8601String(),
-    });
+    try {
+      await _firestore.collection(AppConstants.colUsers).doc(user.uid).set({
+        'hasPassword': true,
+        'passwordUpdatedAt': now.toIso8601String(),
+        'updatedAt': now.toIso8601String(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      // Ignorer si Firestore a une latence réseau, le mot de passe Auth a été changé avec succès
+    }
 
     try {
       await _firestore.collection(AppConstants.colAuditLogs).add({

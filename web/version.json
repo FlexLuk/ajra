@@ -1,9 +1,9 @@
-﻿{
+{
     "version":  "1.5.0",
-    "releaseNotes":  "AJRA v1.5.0 : Navigation retour sécurisée (historique restauré, suppression des doubles flèches, confirmation par double appui pour quitter l'application depuis l'accueil) et stabilité de production.",
+    "releaseNotes":  "AJRA v1.5.0 : Correction intégrale de la création de mot de passe (règles Firestore directes, fiabilisation auth), navigation retour sécurisée et confirmation double appui.",
     "playStoreUrl":  "https://play.google.com/store/apps/details?id=com.ajra.ajra",
     "apkUrl":  "https://ajra-app-8ae42.web.app/app.apk",
-    "updatedAt":  "2026-11-17T15:16:00.0000000+04:00",
-    "md5":  "8114b7496ced0498300bfe905163987a",
+    "updatedAt":  "2026-11-17T16:00:00.0000000+04:00",
+    "md5":  "828acb2168717c5be2eff468436b6a68",
     "buildNumber":  5
 }

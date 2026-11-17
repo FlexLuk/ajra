@@ -63,12 +63,13 @@ service cloud.firestore {
       );
       
       allow create: if isOwner(userId) &&
-        (request.resource.data.role == 'MEMBRE' || isAdmin()) &&
+        (request.resource.data.get('role', 'MEMBRE') == 'MEMBRE' || isAdmin()) &&
         (!request.resource.data.keys().hasAny(['permissions']) || request.resource.data.permissions.size() == 0 || isAdmin());
 
       allow update: if isSignedIn() && (
         isAdmin() ||
-        (isOwner(userId) && isNotSuspended() && 
+        (isOwner(userId) && 
+         resource.data.get('isSuspended', false) == false && 
          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'isSuspended']))
       );
 
