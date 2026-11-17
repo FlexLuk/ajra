@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
@@ -437,54 +438,115 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: AppColors.borderLight),
+                boxShadow: AppColors.cardShadow,
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
-                    backgroundImage:
-                        _member.photoUrl != null ? NetworkImage(_member.photoUrl!) : null,
-                    child: _member.photoUrl == null
-                        ? Text(
-                            _member.firstName.isNotEmpty
-                                ? _member.firstName[0].toUpperCase()
-                                : 'M',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 32,
+                        backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
+                        backgroundImage:
+                            _member.photoUrl != null ? NetworkImage(_member.photoUrl!) : null,
+                        child: _member.photoUrl == null
+                            ? Text(
+                                _member.firstName.isNotEmpty
+                                    ? _member.firstName[0].toUpperCase()
+                                    : 'M',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _member.fullName,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          )
-                        : null,
+                            const SizedBox(height: 4),
+                            Text(
+                              'Matricule : ${_member.memberNumber}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context).textTheme.bodySmall?.color,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            StatusBadge.fromMembershipStatus(_member.status),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  if (_member.phone.trim().isNotEmpty || _member.email.trim().isNotEmpty) ...[
+                    const Divider(height: 24),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        Text(
-                          _member.fullName,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        if (_member.phone.trim().isNotEmpty) ...[
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            icon: const Icon(Icons.phone_outlined, size: 16),
+                            label: const Text('Appeler', style: TextStyle(fontSize: 12)),
+                            onPressed: () {
+                              final cleanPhone = _member.phone.replaceAll(RegExp(r'\s+'), '');
+                              launchUrl(Uri.parse('tel:$cleanPhone'));
+                            },
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Matricule : ${_member.memberNumber}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Theme.of(context).textTheme.bodySmall?.color,
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF047857),
+                              side: const BorderSide(color: Color(0xFF047857)),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            icon: const Icon(Icons.chat_outlined, size: 16),
+                            label: const Text('WhatsApp', style: TextStyle(fontSize: 12)),
+                            onPressed: () {
+                              final digits = _member.phone.replaceAll(RegExp(r'[^0-9]'), '');
+                              launchUrl(
+                                Uri.parse('https://wa.me/$digits'),
+                                mode: LaunchMode.externalApplication,
+                              );
+                            },
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        StatusBadge.fromMembershipStatus(_member.status),
+                        ],
+                        if (_member.email.trim().isNotEmpty)
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            icon: const Icon(Icons.email_outlined, size: 16),
+                            label: const Text('E-mail', style: TextStyle(fontSize: 12)),
+                            onPressed: () {
+                              launchUrl(Uri.parse('mailto:${_member.email.trim()}'));
+                            },
+                          ),
                       ],
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

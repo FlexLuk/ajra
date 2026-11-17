@@ -64,6 +64,18 @@ class AppColors {
     end: Alignment.bottomRight,
   );
 
+  static const LinearGradient memberCardGradient = LinearGradient(
+    colors: [Color(0xFF0B192C), Color(0xFF1E3A8A), Color(0xFF0F766E)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient emeraldGradient = LinearGradient(
+    colors: [Color(0xFF065F46), Color(0xFF0D9488)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   static const LinearGradient goldGradient = LinearGradient(
     colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
     begin: Alignment.topLeft,

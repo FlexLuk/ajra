@@ -9,6 +9,7 @@ import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/services/app_update_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
+import '../../../shared/widgets/cards/ajra_digital_member_card.dart';
 import '../../../shared/widgets/forms/ajra_date_field.dart';
 import '../../../shared/widgets/forms/ajra_text_field.dart';
 import '../../../shared/widgets/indicators/status_badge.dart';
@@ -666,79 +667,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // User Card
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.borderLight),
+              // Digital Official Member ID Card + Edit Button
+              if (user != null) ...[
+                AjraDigitalMemberCard(
+                  user: user,
+                  member: member,
                 ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 36,
-                          backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
-                          backgroundImage:
-                              user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
-                          child: user?.photoUrl == null
-                              ? Text(
-                                  user != null && user.displayName.isNotEmpty
-                                      ? user.displayName[0].toUpperCase()
-                                      : 'U',
-                                  style: const TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primary,
-                                  ),
-                                )
-                              : null,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user?.displayName ?? 'Membre',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                user?.email ?? '',
-                                style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
-                              ),
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
-                                children: [
-                                  StatusBadge.fromRole(role),
-                                  if (member != null)
-                                    StatusBadge.fromMembershipStatus(member.status),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (user != null) ...[
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.edit_note_rounded, size: 18),
-                          label: const Text('Modifier mes informations personnelles'),
-                          onPressed: () => _openEditProfileModal(user, member),
-                        ),
-                      ),
-                    ],
-                  ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.edit_note_rounded, size: 18),
+                    label: const Text('Modifier mes informations personnelles'),
+                    onPressed: () => _openEditProfileModal(user, member),
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 20),
 
               // Security & Password Card (Connexion par identifiant & mot de passe)
@@ -1149,7 +1093,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'v1.4.8 (Release Production)',
+                          'v1.4.9 (Release Production)',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,

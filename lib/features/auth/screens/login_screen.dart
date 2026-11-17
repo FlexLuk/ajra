@@ -704,12 +704,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     const SizedBox(height: 18),
 
-                    // Quick Action Bar: Check Update (MAJ) + Download APK (on Web)
+                    // Quick Action Bar: Statuts + Check Update (MAJ) + Download APK
                     Wrap(
                       alignment: WrapAlignment.center,
                       spacing: 10,
                       runSpacing: 8,
                       children: [
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: const BorderSide(color: AppColors.borderLight),
+                            backgroundColor: Colors.white.withValues(alpha: 0.85),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          icon: const Icon(Icons.gavel_rounded, size: 16, color: AppColors.primary),
+                          label: const Text(
+                            '15 Statuts & RPD',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                          ),
+                          onPressed: () => context.go('/about'),
+                        ),
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

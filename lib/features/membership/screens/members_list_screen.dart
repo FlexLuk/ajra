@@ -61,6 +61,54 @@ class MembersListScreen extends ConsumerWidget {
         ),
         body: Column(
           children: [
+            // Summary Strip of Association Membership
+            membersAsync.when(
+              data: (members) {
+                final activeCount = members.where((m) => m.isActive).length;
+                final pendingCount = members.where((m) => m.isPending).length;
+                final workerCount =
+                    members.where((m) => m.permitType == PermitType.worker).length;
+                final studentCount =
+                    members.where((m) => m.permitType == PermitType.student).length;
+
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.heroGradient,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Wrap(
+                    spacing: 16,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Effectif : ${members.length} membre(s)',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        '$activeCount actif(s) • $pendingCount en attente • $workerCount trav. / $studentCount étud.',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
+
             // Search Bar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -531,6 +532,93 @@ class _TreasuryDashboardScreenState extends ConsumerState<TreasuryDashboardScree
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 14),
+                        Builder(
+                          builder: (context) {
+                            final totalVolume = totalIncomeCents + totalExpenseCents;
+                            final incomeRatio =
+                                totalVolume > 0 ? (totalIncomeCents / totalVolume) : 1.0;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: LinearProgressIndicator(
+                                    value: incomeRatio.clamp(0.0, 1.0),
+                                    minHeight: 6,
+                                    backgroundColor: AppColors.danger.withValues(alpha: 0.45),
+                                    valueColor: const AlwaysStoppedAnimation<Color>(
+                                      Color(0xFF34D399),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 6,
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      '${validatedTxs.length} écriture(s) validée(s)',
+                                      style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+                                    ),
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(20),
+                                      onTap: () async {
+                                        final dateStr =
+                                            DateFormat('dd/MM/yyyy à HH:mm').format(DateTime.now());
+                                        final summary =
+                                            '📊 *BILAN TRÉSORERIE AJRA* ($dateStr)\n'
+                                            '━━━━━━━━━━━━━━━━━━\n'
+                                            '💰 *Solde Global Net* : ${netBalance.toFormattedString()}\n'
+                                            '📈 *Recettes validées* : ${totalIncome.toFormattedString()}\n'
+                                            '📉 *Dépenses validées* : ${totalExpense.toFormattedString()}\n'
+                                            '⏳ *Opérations en attente* : ${pendingTxs.length} (${pendingTotal.toFormattedString()})\n'
+                                            '━━━━━━━━━━━━━━━━━━\n'
+                                            '🇲🇬 🇲🇺 _Association des Jeunes de la Région Anosy_';
+                                        await Clipboard.setData(ClipboardData(text: summary));
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              backgroundColor: AppColors.success,
+                                              content: Text(
+                                                'Résumé de trésorerie copié ! Vous pouvez le coller sur WhatsApp.',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.14),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.white24),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.copy_all_rounded, size: 14, color: Colors.white),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              'Copier résumé WhatsApp',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ),

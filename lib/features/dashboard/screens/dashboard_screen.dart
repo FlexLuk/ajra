@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_constants.dart';
+import 'package:intl/intl.dart';
 import '../../../core/security/roles_and_permissions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/buttons/ajra_button.dart';
+import '../../../shared/widgets/cards/ajra_digital_member_card.dart';
 import '../../../shared/widgets/cards/metric_card.dart';
 import '../../accounting/models/financial_transaction.dart';
+import '../../auth/models/app_user.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dues/models/monthly_due.dart';
 import '../../dues/screens/dues_list_screen.dart';
@@ -49,8 +51,13 @@ class DashboardScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Welcome Banner
-                  _buildWelcomeBanner(context, user, memberProfile),
+                  // Digital Member ID Card (Hero)
+                  if (user != null)
+                    AjraDigitalMemberCard(
+                      user: user,
+                      member: memberProfile,
+                      onTap: () => context.go('/profile'),
+                    ),
                   const SizedBox(height: 16),
 
                   // Prompt to configure password if not yet set
@@ -107,17 +114,21 @@ class DashboardScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                   ],
 
-                  // If role is ADMIN
+                  // Role-specific Dashboard Content
                   if (role.isAdmin) ...[
                     _buildAdminDashboard(context, ref),
-                  ] else if (role.isBureau) ...[
-                    _buildBureauDashboard(context, ref, user!),
+                  ] else if (role.isBureau && user != null) ...[
+                    _buildBureauDashboard(context, ref, user),
                   ] else ...[
                     _buildMemberDashboard(context, ref, memberProfile),
                   ],
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 22),
+                  _buildUpcomingEventSection(context, ref),
+
+                  const SizedBox(height: 22),
                   _buildRecentPostsSection(context, ref),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -127,130 +138,118 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWelcomeBanner(BuildContext context, dynamic user, MemberProfile? member) {
-    final displayName = user?.displayName ?? 'Membre';
-
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        gradient: AppColors.heroGradient,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.35),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white38, width: 2),
-            ),
-            child: CircleAvatar(
-              radius: 28,
-              backgroundColor: Colors.white24,
-              backgroundImage: user?.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
-              child: user?.photoUrl == null
-                  ? Text(
-                      displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    )
-                  : null,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Bonjour, $displayName',
+  Widget _buildSectionTitle(String title, IconData icon, {Widget? trailing}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 17, color: AppColors.primary),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  title,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 19,
+                    fontSize: 15.5,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
+                    letterSpacing: -0.2,
                   ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    member != null
-                        ? 'Matricule : ${member.memberNumber} • ${member.status.label}'
-                        : 'Espace Membre Officiel AJRA',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              border: Border.all(color: Colors.white, width: 2.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                AppConstants.logoAsset,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const Icon(
-                  Icons.groups,
-                  color: AppColors.primary,
-                  size: 28,
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+        ?trailing,
+      ],
     );
   }
 
   Widget _buildAdminDashboard(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(allMembersProvider);
     final txsAsync = ref.watch(recentTransactionsProvider);
+    final allDuesAsync = ref.watch(allDuesProvider);
+    final expiringAsync = ref.watch(expiringPassportsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Vue d\'ensemble Administrateur',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        _buildSectionTitle('Pilotage Exécutif & Indicateurs', Icons.analytics_outlined),
         const SizedBox(height: 12),
+
+        // Priority Alerts Banner (Expiring Passports / Declared Dues to Verify)
+        Builder(
+          builder: (context) {
+            final declaredCount = allDuesAsync.value
+                    ?.where((d) => d.status == DueStatus.declared)
+                    .length ??
+                0;
+            final expiringCount = expiringAsync.value?.length ?? 0;
+
+            if (declaredCount == 0 && expiringCount == 0) {
+              return const SizedBox.shrink();
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.notifications_active_outlined, size: 18, color: Color(0xFFB45309)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Actions prioritaires du Bureau',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (declaredCount > 0)
+                          ActionChip(
+                            avatar: const Icon(Icons.fact_check_outlined, size: 16, color: AppColors.primary),
+                            label: Text('$declaredCount cotisation(s) à vérifier'),
+                            onPressed: () => context.go('/dues'),
+                          ),
+                        if (expiringCount > 0)
+                          ActionChip(
+                            avatar: const Icon(Icons.badge_outlined, size: 16, color: AppColors.danger),
+                            label: Text('$expiringCount passeport(s) expirant sous 90j'),
+                            onPressed: () => context.go('/members'),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
 
         // Metrics Grid
         membersAsync.when(
@@ -264,7 +263,7 @@ class DashboardScreen extends ConsumerWidget {
                   child: MetricCard(
                     title: 'Membres Actifs',
                     value: '$activeCount',
-                    subtitle: '$pendingCount en attente',
+                    subtitle: '${members.length} inscrits au total',
                     icon: Icons.people_alt_outlined,
                     iconColor: AppColors.primary,
                     onTap: () => context.go('/members'),
@@ -273,11 +272,11 @@ class DashboardScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: MetricCard(
-                    title: 'Demandes à valider',
+                    title: 'Adhésions en attente',
                     value: '$pendingCount',
-                    subtitle: 'Examen requis',
+                    subtitle: pendingCount > 0 ? 'Examen requis' : 'Tout est à jour',
                     icon: Icons.pending_actions_outlined,
-                    iconColor: AppColors.warning,
+                    iconColor: pendingCount > 0 ? AppColors.warning : AppColors.success,
                     onTap: () => context.go('/members'),
                   ),
                 ),
@@ -316,11 +315,11 @@ class DashboardScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: MetricCard(
-                    title: 'Opérations en attente',
+                    title: 'Écritures en attente',
                     value: '$pendingOps',
-                    subtitle: 'À vérifier',
+                    subtitle: pendingOps > 0 ? 'À valider' : 'Aucune en attente',
                     icon: Icons.hourglass_empty_rounded,
-                    iconColor: AppColors.warning,
+                    iconColor: pendingOps > 0 ? AppColors.warning : AppColors.success,
                     onTap: () => context.go('/treasury'),
                   ),
                 ),
@@ -330,27 +329,29 @@ class DashboardScreen extends ConsumerWidget {
           loading: () => const SizedBox.shrink(),
           error: (_, _) => const SizedBox.shrink(),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 22),
 
-        // Quick Navigation Grid
-        const Text(
-          'Raccourcis de gestion',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        _buildSectionTitle('Modules & Administration', Icons.grid_view_rounded),
         const SizedBox(height: 12),
         Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: 10,
+          runSpacing: 10,
           children: [
             _buildActionChip(
               context,
-              label: 'Gestion Utilisateurs & Rôles',
+              label: 'Utilisateurs & Rôles',
               icon: Icons.admin_panel_settings_outlined,
               route: '/admin/roles',
             ),
             _buildActionChip(
               context,
-              label: 'Rapports & Exports',
+              label: 'Emprunts Solidaires',
+              icon: Icons.handshake_outlined,
+              route: '/loans',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Rapports & Exports PDF/CSV',
               icon: Icons.picture_as_pdf_outlined,
               route: '/reports',
             ),
@@ -368,9 +369,9 @@ class DashboardScreen extends ConsumerWidget {
             ),
             _buildActionChip(
               context,
-              label: 'Emprunts des Membres',
-              icon: Icons.handshake_outlined,
-              route: '/loans',
+              label: 'Messagerie & Groupes',
+              icon: Icons.chat_outlined,
+              route: '/conversations',
             ),
             _buildActionChip(
               context,
@@ -390,18 +391,15 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBureauDashboard(BuildContext context, WidgetRef ref, dynamic user) {
+  Widget _buildBureauDashboard(BuildContext context, WidgetRef ref, AppUser user) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Espace Bureau AJRA',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        _buildSectionTitle('Espace Responsable du Bureau', Icons.workspace_premium_outlined),
         const SizedBox(height: 12),
         Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: 10,
+          runSpacing: 10,
           children: [
             if (user.isAdmin)
               _buildActionChip(
@@ -480,14 +478,15 @@ class DashboardScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Member Status Card
+        // Member Status Card if incomplete or pending
         if (member == null) ...[
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(color: AppColors.borderLight),
+              boxShadow: AppColors.cardShadow,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -510,6 +509,7 @@ class DashboardScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 20),
         ] else if (member.isPending) ...[
           Container(
             padding: const EdgeInsets.all(16),
@@ -520,7 +520,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.hourglass_top, color: AppColors.warning),
+                const Icon(Icons.hourglass_top, color: Color(0xFFB45309)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -544,36 +544,77 @@ class DashboardScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 20),
         ],
-        const SizedBox(height: 20),
 
-        // Personal Dues Quick Look
-        const Text(
-          'Mes Cotisations',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        // Personal Dues & Regularity Progress Card
+        _buildSectionTitle(
+          'Mes Cotisations & Régularité',
+          Icons.receipt_long_outlined,
+          trailing: TextButton(
+            onPressed: () => context.go('/dues'),
+            child: const Text('Historique'),
+          ),
         ),
         const SizedBox(height: 10),
         duesAsync.when(
           data: (dues) {
+            final totalDuesCount = dues.length;
+            final paidDuesCount = dues.where((d) => d.status == DueStatus.paid).length;
             final unpaidDues = dues.where((d) => d.status != DueStatus.paid).toList();
+
+            int totalPaidCents = 0;
+            for (final d in dues) {
+              totalPaidCents += d.amountPaid.cents;
+            }
+            final totalPaidMoney = Money.fromCents(totalPaidCents);
+            final progress = totalDuesCount > 0 ? (paidDuesCount / totalDuesCount) : 1.0;
 
             if (unpaidDues.isEmpty) {
               return Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppColors.successLight,
-                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.success.withValues(alpha: 0.35)),
+                  boxShadow: AppColors.cardShadow,
                 ),
-                child: const Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.verified, color: AppColors.success),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Vous êtes parfaitement à jour dans vos cotisations !',
-                        style: TextStyle(
-                            color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: AppColors.successLight,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.verified_rounded, color: AppColors.success, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Vous êtes 100 % à jour !',
+                                style: TextStyle(
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14.5,
+                                ),
+                              ),
+                              Text(
+                                totalDuesCount > 0
+                                    ? '$paidDuesCount/$totalDuesCount mois réglés • Total versé : ${totalPaidMoney.toFormattedString()}'
+                                    : 'Aucune cotisation en attente de règlement.',
+                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -582,34 +623,78 @@ class DashboardScreen extends ConsumerWidget {
 
             final firstUnpaid = unpaidDues.first;
             return Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: AppColors.borderLight),
+                boxShadow: AppColors.cardShadow,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 10,
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text(
-                        'Échéance : ${firstUnpaid.periodLabel}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Échéance : ${firstUnpaid.periodLabel}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Reste à régler : ${firstUnpaid.remainingAmount.toFormattedString()}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Reste à payer : ${firstUnpaid.remainingAmount.toFormattedString()}',
-                        style: const TextStyle(fontSize: 13, color: AppColors.primary),
+                      AjraButton(
+                        label: 'Déclarer / Régler',
+                        icon: Icons.payments_outlined,
+                        height: 40,
+                        onPressed: () => context.go('/dues'),
                       ),
                     ],
                   ),
-                  AjraButton(
-                    label: 'Régler',
-                    height: 38,
-                    onPressed: () => context.go('/dues'),
-                  ),
+                  if (totalDuesCount > 0) ...[
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Régularité : $paidDuesCount / $totalDuesCount mois validés',
+                          style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondaryLight),
+                        ),
+                        Text(
+                          'Cumul versé : ${totalPaidMoney.toFormattedString()}',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.secondaryDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 7,
+                        backgroundColor: const Color(0xFFE2E8F0),
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             );
@@ -618,22 +703,30 @@ class DashboardScreen extends ConsumerWidget {
           error: (_, _) => const SizedBox.shrink(),
         ),
 
-        const SizedBox(height: 24),
-        // Member Navigation Links
-        const Text(
-          'Accès direct',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        const SizedBox(height: 22),
+        _buildSectionTitle('Services & Espace Associatif', Icons.apps_rounded),
         const SizedBox(height: 12),
         Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: 10,
+          runSpacing: 10,
           children: [
             _buildActionChip(
               context,
-              label: 'Événements & Activités',
+              label: 'Événements & Sorties',
               icon: Icons.event_outlined,
               route: '/events',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Emprunts Solidaires',
+              icon: Icons.handshake_outlined,
+              route: '/loans',
+            ),
+            _buildActionChip(
+              context,
+              label: 'Messagerie & Groupes',
+              icon: Icons.chat_bubble_outline,
+              route: '/conversations',
             ),
             _buildActionChip(
               context,
@@ -643,21 +736,9 @@ class DashboardScreen extends ConsumerWidget {
             ),
             _buildActionChip(
               context,
-              label: 'Messagerie',
-              icon: Icons.chat_bubble_outline,
-              route: '/conversations',
-            ),
-            _buildActionChip(
-              context,
               label: 'Droit d\'adhésion',
               icon: Icons.payments_outlined,
               route: '/membership-fee',
-            ),
-            _buildActionChip(
-              context,
-              label: 'Emprunts des Membres',
-              icon: Icons.handshake_outlined,
-              route: '/loans',
             ),
             _buildActionChip(
               context,
@@ -677,50 +758,133 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildUpcomingEventSection(BuildContext context, WidgetRef ref) {
+    final eventsAsync = ref.watch(eventsStreamProvider);
+
+    return eventsAsync.when(
+      data: (events) {
+        if (events.isEmpty) return const SizedBox.shrink();
+        final nextEvent = events.first;
+        final dateStr = DateFormat('dd MMM yyyy à HH:mm', 'fr_FR').format(nextEvent.startDate);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle(
+              'Prochaine Activité / Sortie AJRA',
+              Icons.event_available_outlined,
+              trailing: TextButton(
+                onPressed: () => context.go('/events'),
+                child: const Text('Voir tout'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () => context.go('/events'),
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.borderLight),
+                  boxShadow: AppColors.cardShadow,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.oceanicGradient,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.celebration_outlined, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nextEvent.title,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '📍 ${nextEvent.location} • 🗓 $dateStr',
+                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                          ),
+                          if (nextEvent.participationFee != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'PAF : ${nextEvent.participationFee!.toFormattedString()} / personne',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.secondaryDark,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, color: AppColors.textMutedLight),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+
   Widget _buildActionChip(
     BuildContext context, {
     required String label,
     required IconData icon,
     required String route,
   }) {
-    return InkWell(
-      onTap: () => context.go(route),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x060F172A),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.go(route),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.9)),
+            boxShadow: AppColors.cardShadow,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withValues(alpha: 0.11),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, size: 16, color: AppColors.primary),
               ),
-              child: Icon(icon, size: 16, color: AppColors.primary),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimaryLight,
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  label,
+                  softWrap: true,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimaryLight,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -732,24 +896,13 @@ class DashboardScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.campaign_outlined, color: AppColors.primary, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Publications & Actualités',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            TextButton(
-              onPressed: () => context.go('/posts'),
-              child: const Text('Tout voir'),
-            ),
-          ],
+        _buildSectionTitle(
+          'Communiqués & Actualités',
+          Icons.campaign_outlined,
+          trailing: TextButton(
+            onPressed: () => context.go('/posts'),
+            child: const Text('Tout voir'),
+          ),
         ),
         const SizedBox(height: 8),
         postsAsync.when(
@@ -759,7 +912,7 @@ class DashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppColors.borderLight),
                 ),
                 child: const Row(
@@ -768,7 +921,7 @@ class DashboardScreen extends ConsumerWidget {
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Aucune publication pour le moment.',
+                        'Aucune publication officielle pour le moment.',
                         style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight),
                       ),
                     ),
@@ -780,25 +933,35 @@ class DashboardScreen extends ConsumerWidget {
             final previewPosts = posts.take(2).toList();
             return Column(
               children: previewPosts.map((post) {
+                final dateStr = DateFormat('dd/MM/yyyy', 'fr_FR').format(post.publishedAt);
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     leading: CircleAvatar(
-                      backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
-                      child: const Icon(Icons.campaign, color: AppColors.primary, size: 18),
+                      backgroundColor: AppColors.primaryLight.withValues(alpha: 0.14),
+                      child: const Icon(Icons.campaign_rounded, color: AppColors.primary, size: 20),
                     ),
                     title: Text(
                       post.title,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: Text(
-                      post.content,
-                      style: const TextStyle(fontSize: 12),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 3),
+                        Text(
+                          post.content,
+                          style: const TextStyle(fontSize: 12.5),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Publié le $dateStr par ${post.authorName}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.textMutedLight),
+                        ),
+                      ],
                     ),
                     trailing: const Icon(Icons.chevron_right, size: 18, color: AppColors.textMutedLight),
                     onTap: () => context.go('/posts'),

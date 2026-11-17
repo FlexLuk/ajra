@@ -1,9 +1,9 @@
 ﻿{
-    "version":  "1.4.8",
-    "releaseNotes":  "Interface modernisée (Material 3), connexion Google + Identifiant/Mot de passe, création de mot de passe dans Mon Profil, et vérification automatique de mise à jour (MD5 \u0026 Play Store).",
+    "version":  "1.4.9",
+    "releaseNotes":  "Nouveau design AJRA v1.4.9 : Carte de membre numérique officielle, suivi de régularité des cotisations, résumé WhatsApp de trésorerie en 1 clic, connexion par identifiant/mot de passe et vérification automatique MAJ.",
     "playStoreUrl":  "https://play.google.com/store/apps/details?id=com.ajra.ajra",
     "apkUrl":  "https://ajra-app-8ae42.web.app/app.apk",
-    "updatedAt":  "2026-11-17T00:26:27.9809823+04:00",
-    "md5":  "f48a1f92aa07da55f4ef2160f92b0314",
-    "buildNumber":  3
+    "updatedAt":  "2026-11-17T12:02:42.5010868+04:00",
+    "md5":  "63ab4803687f55546831381c70e8a151",
+    "buildNumber":  4
 }

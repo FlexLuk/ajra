@@ -123,10 +123,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = user != null;
       final isLoggingIn = state.matchedLocation == '/login';
       final isSplash = state.matchedLocation == '/splash';
+      final isPublicAbout = state.matchedLocation == '/about';
 
       if (isSplash) return null;
 
-      if (!isLoggedIn && !isLoggingIn) {
+      if (!isLoggedIn && !isLoggingIn && !isPublicAbout) {
         return '/login';
       }
 

@@ -72,7 +72,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
           tabs: const [
             Tab(icon: Icon(Icons.gavel_rounded, size: 20), text: 'Statuts Officiels'),
             Tab(icon: Icon(Icons.security_outlined, size: 20), text: 'RPD & Règlement'),
-            Tab(icon: Icon(Icons.info_outline, size: 20), text: 'Application (1.4.8)'),
+            Tab(icon: Icon(Icons.info_outline, size: 20), text: 'Application (1.4.9)'),
           ],
         ),
       ),
@@ -378,7 +378,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
-                  'Version 1.4.8 (Release Production)',
+                  'Version 1.4.9 (Release Production)',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
